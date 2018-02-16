@@ -1,4 +1,6 @@
 # ESIO
-Extended Sea Ice Outlook
+## Extended Sea Ice Outlook
 
-Place holder for now...
+[Beta daily updated plots here!](https://atmos.washington.edu/~nicway/sipn/)
+
+
