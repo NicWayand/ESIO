@@ -62,6 +62,7 @@ def get_stero_N_grid():
     NX=448;
     lat = readBinFile(flat, NX, NY).T
     lon = readBinFile(flon, NX, NY).T
+    # Add cell corner lat/lon
     return xr.Dataset({'lat': (['x', 'y'],  lat), 'lon': (['x', 'y'], lon)})
 
 # Define naive_fast that searches for the nearest WRF grid cell center
@@ -73,6 +74,68 @@ def naive_fast(latvar,lonvar,lat0,lon0):
     minindex_flattened = dist_sq.argmin()  # 1D index of min element
     iy_min,ix_min = np.unravel_index(minindex_flattened, latvals.shape)
     return iy_min,ix_min
+
+def mask_common_extent(ds_obs, ds_mod, max_obs_missing=0.1):
+    # Mask out areas where either observations or model are missing
+    mask_obs = ds_obs.isnull().sum(dim='time') / ds_obs.time.size # Get fraction of missing for each pixel
+    mask_mod = ds_mod.sic.isel(fore_time_i=0).isel(init_time=0).isel(ensemble=0).notnull() # Grab one model to get extent
+    mask_comb = (mask_obs <= max_obs_missing) & (mask_mod) # Allow 10% missing in observations
+    mask_comb = mask_comb.drop(['ensemble','fore_time_i','init_time','fore_time']) # Drop unneeded variables
+    # Apply and return
+    ds_obs_out = ds_obs.where(mask_comb)
+    ds_mod_out = ds_mod.where(mask_comb)
+    ds_mod_out.coords['fore_time'] = ds_mod.fore_time # add back coords that were dropped
+    return (ds_obs_out, ds_mod_out)
+
+def cell_bounds_to_corners(gridinfo=None, varname=None):
+    # Add cell bound coords (lat_b and lon_b)
+    n_j = gridinfo.grid_dims.values[1]
+    n_i = gridinfo.grid_dims.values[0]
+    nj_b = np.arange(0, n_j + 1) # indices of corner of cells
+    ni_b = np.arange(0, n_i + 1)
+
+    # Grab all corners and combine
+    dim_out = tuple(np.flip(gridinfo.grid_dims.T.values,0))
+    ul = xr.DataArray(gridinfo[varname].isel(grid_corners=0).values.reshape(dim_out),
+                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[0:-1]}) 
+    ur = xr.DataArray(gridinfo[varname].isel(grid_corners=1).values.reshape(dim_out),
+                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[1:]}) 
+    lr = xr.DataArray(gridinfo[varname].isel(grid_corners=2).values.reshape(dim_out),
+                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[1:]}) 
+    ll = xr.DataArray(gridinfo[varname].isel(grid_corners=3).values.reshape(dim_out),
+                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[0:-1]}) 
+
+    return xr.ufuncs.rad2deg(  ul.combine_first(ur).combine_first(lr).combine_first(ll)  )
+
+# Load in correct GFDL grid info and format
+def load_grid_info(grid_file=None):
+    grid = xr.open_dataset(grid_file)
+    n_lat = np.rad2deg(grid.grid_center_lat.values.reshape(tuple(np.flip(grid.grid_dims.T.values,0)))) # Reshape
+    n_lon = np.rad2deg(grid.grid_center_lon.values.reshape(tuple(np.flip(grid.grid_dims.T.values,0)))) # Reshape
+    
+    nj = xr.DataArray(np.arange(0,n_lat.shape[0],1), dims=('nj')) # Make indices
+    ni = xr.DataArray(np.arange(0,n_lat.shape[1],1), dims=('ni'))
+    lat = xr.DataArray(n_lat, dims=('nj','ni'), coords={'nj':nj, 'ni':ni})
+    lon = xr.DataArray(n_lon, dims=('nj','ni'), coords={'nj':nj, 'ni':ni})
+    
+    lat_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lat')
+    lon_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lon')
+    
+    # Combine
+    return xr.Dataset({'lat':lat, 'lon':lon, 'lat_b':lat_b, 'lon_b':lon_b})
+
+# Split tripolar grid by 65 N
+def split_by_lat(ds, latVal=65.0, want=None):
+    if want=='above':
+        ds_out = ds.drop(['lat_b','lon_b','nj_b','ni_b']).where(ds.lat>latVal, drop=True)
+        ds_out.coords['lat_b'] = ds.lat_b.sel(nj_b=np.append(ds_out.nj.values, ds_out.nj.values[-1]+1))
+    elif want=='below':
+        ds_out = ds.drop(['lat_b','lon_b','nj_b','ni_b']).where(ds.lat<=latVal, drop=True)
+        ds_out.coords['lat_b'] = ds.lat_b.sel(nj_b=np.append(ds_out.nj.values, ds_out.nj.values[-1]+1))
+    else:
+         raise ValueError('Value for want not found. Use above or below.')
+    return ds_out
+    
     
 ############################################################################
 # Plotting functions

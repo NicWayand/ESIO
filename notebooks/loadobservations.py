@@ -44,9 +44,13 @@ def read_NSIDC_binary(cfile, x, y, product=None):
 
 def load_NSIDC(all_files=None, product=None):
     # Define coords
-    dx = dy = 25000
-    x = np.arange(-3850000, +3750000, +dx)
-    y = np.arange(+5850000, -5350000, -dy)
+    # Stereo projected units (m?)
+    #dx = dy = 25000
+    #x = np.arange(-3850000, +3750000, +dx)
+    #y = np.arange(+5850000, -5350000, -dy)
+    # Indices values
+    x = np.arange(0,304,1)
+    y = np.arange(0,448,1)
     # Loop through each binary file and read into a Dataarray
     da_l = []
     for cf in all_files:
