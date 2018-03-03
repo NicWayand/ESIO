@@ -87,28 +87,75 @@ def mask_common_extent(ds_obs, ds_mod, max_obs_missing=0.1):
     ds_mod_out.coords['fore_time'] = ds_mod.fore_time # add back coords that were dropped
     return (ds_obs_out, ds_mod_out)
 
+# def cell_bounds_to_corners(gridinfo=None, varname=None):
+#     # Add cell bound coords (lat_b and lon_b)
+#     n_j = gridinfo.grid_dims.values[1]
+#     n_i = gridinfo.grid_dims.values[0]
+#     nj_b = np.arange(0, n_j + 1) # indices of corner of cells
+#     ni_b = np.arange(0, n_i + 1)
+
+#     # Grab all corners and combine
+#     dim_out = tuple(np.flip(gridinfo.grid_dims.T.values,0))
+#     ul = xr.DataArray(gridinfo[varname].isel(grid_corners=0).values.reshape(dim_out),
+#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[0:-1]}) 
+#     ur = xr.DataArray(gridinfo[varname].isel(grid_corners=1).values.reshape(dim_out),
+#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[1:]}) 
+#     lr = xr.DataArray(gridinfo[varname].isel(grid_corners=2).values.reshape(dim_out),
+#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[1:]}) 
+#     ll = xr.DataArray(gridinfo[varname].isel(grid_corners=3).values.reshape(dim_out),
+#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[0:-1]}) 
+
+#     return xr.ufuncs.rad2deg(  ul.combine_first(ur).combine_first(lr).combine_first(ll)  )
+
 def cell_bounds_to_corners(gridinfo=None, varname=None):
     # Add cell bound coords (lat_b and lon_b)
     n_j = gridinfo.grid_dims.values[1]
     n_i = gridinfo.grid_dims.values[0]
     nj_b = np.arange(0, n_j + 1) # indices of corner of cells
     ni_b = np.arange(0, n_i + 1)
-
-    # Grab all corners and combine
+    
+    # Grab all corners as arrays
     dim_out = tuple(np.flip(gridinfo.grid_dims.T.values,0))
-    ul = xr.DataArray(gridinfo[varname].isel(grid_corners=0).values.reshape(dim_out),
-                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[0:-1]}) 
-    ur = xr.DataArray(gridinfo[varname].isel(grid_corners=1).values.reshape(dim_out),
-                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[1:]}) 
-    lr = xr.DataArray(gridinfo[varname].isel(grid_corners=2).values.reshape(dim_out),
-                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[1:]}) 
-    ll = xr.DataArray(gridinfo[varname].isel(grid_corners=3).values.reshape(dim_out),
-                 dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[0:-1]}) 
+    ul = gridinfo[varname].isel(grid_corners=0).values.reshape(dim_out)
+    ll = gridinfo[varname].isel(grid_corners=1).values.reshape(dim_out)
+    lr = gridinfo[varname].isel(grid_corners=2).values.reshape(dim_out)
+    ur = gridinfo[varname].isel(grid_corners=3).values.reshape(dim_out)
+    
+    # Merge together
+    m1 = np.concatenate((ul, ur[:,0][:, None]), axis=1) # add on ur at right
+    m2 = np.append(ll[-1,:], lr[-1,0])
+    m3 = np.concatenate((m1, m2[:, None].T), axis=0) # add ll and lr to bottom
+    ds_out = xr.DataArray(m3, dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b, 'ni_b':ni_b}) 
+    ds_out = xr.ufuncs.rad2deg( ds_out ) # rad to deg
+    return ds_out
 
-    return xr.ufuncs.rad2deg(  ul.combine_first(ur).combine_first(lr).combine_first(ll)  )
+def cell_bounds_to_corners_GFDL(gridinfo=None, varname=None):
+    # Add cell bound coords (lat_b and lon_b)
+    n_j = gridinfo.grid_dims.values[1]
+    n_i = gridinfo.grid_dims.values[0]
+    nj_b = np.arange(0, n_j + 1) # indices of corner of cells
+    ni_b = np.arange(0, n_i + 1)
+    
+    # Grab all corners as arrays
+    dim_out = tuple(np.flip(gridinfo.grid_dims.T.values,0))
+    ll = gridinfo[varname].isel(grid_corners=0).values.reshape(dim_out)
+    lr = gridinfo[varname].isel(grid_corners=1).values.reshape(dim_out)
+    ur = gridinfo[varname].isel(grid_corners=2).values.reshape(dim_out)
+    ul = gridinfo[varname].isel(grid_corners=3).values.reshape(dim_out)
+    
+    # Merge together
+    m1 = np.concatenate((ul, ur[:,-1][:, None]), axis=1) # add on ur at right
+    m2 = np.append(ll[-1,:], lr[-1,-1])
+    m3 = np.concatenate((m1, m2[:, None].T), axis=0) # add ll and lr to bottom
+    ds_out = xr.DataArray(m3, dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b, 'ni_b':ni_b}) 
+    ds_out = xr.ufuncs.rad2deg( ds_out ) # rad to deg
+    return ds_out
+#     return (np.rad2deg(ul), np.rad2deg(ll), np.rad2deg(lr), np.rad2deg(ur))
+
+
 
 # Load in correct GFDL grid info and format
-def load_grid_info(grid_file=None):
+def load_grid_info(grid_file=None, model=None):
     grid = xr.open_dataset(grid_file)
     n_lat = np.rad2deg(grid.grid_center_lat.values.reshape(tuple(np.flip(grid.grid_dims.T.values,0)))) # Reshape
     n_lon = np.rad2deg(grid.grid_center_lon.values.reshape(tuple(np.flip(grid.grid_dims.T.values,0)))) # Reshape
@@ -118,8 +165,14 @@ def load_grid_info(grid_file=None):
     lat = xr.DataArray(n_lat, dims=('nj','ni'), coords={'nj':nj, 'ni':ni})
     lon = xr.DataArray(n_lon, dims=('nj','ni'), coords={'nj':nj, 'ni':ni})
     
-    lat_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lat')
-    lon_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lon')
+    if model=='NSIDC':
+        lat_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lat')
+        lon_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lon')
+    elif model=='GFDL':
+        lat_b = cell_bounds_to_corners_GFDL(gridinfo=grid, varname='grid_corner_lat')
+        lon_b = cell_bounds_to_corners_GFDL(gridinfo=grid, varname='grid_corner_lon')
+    else:
+        raise ValueError('model not found.')
     
     # Combine
     return xr.Dataset({'lat':lat, 'lon':lon, 'lat_b':lat_b, 'lon_b':lon_b})
