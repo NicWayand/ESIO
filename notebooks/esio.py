@@ -145,8 +145,8 @@ def cell_bounds_to_corners_GFDL(gridinfo=None, varname=None):
     
     # Merge together
     m1 = np.concatenate((ul, ur[:,-1][:, None]), axis=1) # add on ur at right
-    m2 = np.append(ll[-1,:], lr[-1,-1])
-    m3 = np.concatenate((m1, m2[:, None].T), axis=0) # add ll and lr to bottom
+    m2 = np.append(ll[0,:], lr[0,-1])
+    m3 = np.concatenate((m2[:, None].T, m1), axis=0) # add ll and lr to bottom
     ds_out = xr.DataArray(m3, dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b, 'ni_b':ni_b}) 
     ds_out = xr.ufuncs.rad2deg( ds_out ) # rad to deg
     return ds_out
