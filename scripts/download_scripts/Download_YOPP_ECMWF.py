@@ -7,7 +7,7 @@ prefix = "yopp_ci_"
 data_dir = r'/home/disk/sipn/nicway/data/model/S2S/yopp/'
 native_grib = os.path.join(data_dir, 'native_grib')
 # Note:
-# This dataset is available with 48 hour delay.
+# This dataset is available with 3 day delay.
 
 if not os.path.exists(native_grib):
     os.makedirs(native_grib)
@@ -16,7 +16,7 @@ os.chdir(native_grib)
 
 # Download a single day
 # This dataset is available with 48 hour delay.
-day = datetime.datetime.now() -  datetime.timedelta(days=2)
+day = datetime.datetime.now() -  datetime.timedelta(days=3)
 
 server = ECMWFDataServer()
 server.retrieve({
