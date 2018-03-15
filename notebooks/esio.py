@@ -1,6 +1,11 @@
 import numpy as np
+import pandas as pd
 import xarray as xr
 from scipy import stats
+import scipy
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+
 
 ''' Functions to process sea ice renalysis, reforecasts, and forecasts.'''
 
@@ -43,15 +48,16 @@ def open_1_member(cfiles, e):
     ds = xr.open_mfdataset(cfiles, concat_dim='init_time', decode_times=False, 
                            preprocess=lambda x: preprocess_time(x),
                            autoclose=True)
-    # Sort init_time
-    ds = ds.reindex(init_time=sorted(ds.init_time.values))
+    # Sort init_time (if more than one)
+    if ds.init_time.size>1:
+        ds = ds.reindex(init_time=sorted(ds.init_time.values))
     # Add ensemble coord
     ds.coords['ensemble'] = e
     return ds
 
 def readBinFile(f, nx, ny):
     with open(f, 'rb') as fid:
-        data_array = np.fromfile(f, np.int32)*1e-5
+        data_array = np.fromfile(fid, np.int32)*1e-5
     return data_array.reshape((nx,ny))
 
 def get_stero_N_grid():
@@ -86,26 +92,6 @@ def mask_common_extent(ds_obs, ds_mod, max_obs_missing=0.1):
     ds_mod_out = ds_mod.where(mask_comb)
     ds_mod_out.coords['fore_time'] = ds_mod.fore_time # add back coords that were dropped
     return (ds_obs_out, ds_mod_out)
-
-# def cell_bounds_to_corners(gridinfo=None, varname=None):
-#     # Add cell bound coords (lat_b and lon_b)
-#     n_j = gridinfo.grid_dims.values[1]
-#     n_i = gridinfo.grid_dims.values[0]
-#     nj_b = np.arange(0, n_j + 1) # indices of corner of cells
-#     ni_b = np.arange(0, n_i + 1)
-
-#     # Grab all corners and combine
-#     dim_out = tuple(np.flip(gridinfo.grid_dims.T.values,0))
-#     ul = xr.DataArray(gridinfo[varname].isel(grid_corners=0).values.reshape(dim_out),
-#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[0:-1]}) 
-#     ur = xr.DataArray(gridinfo[varname].isel(grid_corners=1).values.reshape(dim_out),
-#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[1:], 'ni_b':ni_b[1:]}) 
-#     lr = xr.DataArray(gridinfo[varname].isel(grid_corners=2).values.reshape(dim_out),
-#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[1:]}) 
-#     ll = xr.DataArray(gridinfo[varname].isel(grid_corners=3).values.reshape(dim_out),
-#                  dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b[0:-1], 'ni_b':ni_b[0:-1]}) 
-
-#     return xr.ufuncs.rad2deg(  ul.combine_first(ur).combine_first(lr).combine_first(ll)  )
 
 def cell_bounds_to_corners(gridinfo=None, varname=None):
     # Add cell bound coords (lat_b and lon_b)
@@ -150,32 +136,98 @@ def cell_bounds_to_corners_GFDL(gridinfo=None, varname=None):
     ds_out = xr.DataArray(m3, dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b, 'ni_b':ni_b}) 
     ds_out = xr.ufuncs.rad2deg( ds_out ) # rad to deg
     return ds_out
-#     return (np.rad2deg(ul), np.rad2deg(ll), np.rad2deg(lr), np.rad2deg(ur))
 
-
+# Add Nans to matrices, which makes any output cell with a weight from a NaN input cell = NaN
+def add_matrix_NaNs(regridder):
+    X = regridder.A
+    M = scipy.sparse.csr_matrix(X)
+    num_nonzeros = np.diff(M.indptr)
+    M[num_nonzeros == 0, 0] = np.NaN
+    regridder.A = scipy.sparse.coo_matrix(M)
+    return regridder
 
 # Load in correct GFDL grid info and format
 def load_grid_info(grid_file=None, model=None):
     grid = xr.open_dataset(grid_file)
     n_lat = np.rad2deg(grid.grid_center_lat.values.reshape(tuple(np.flip(grid.grid_dims.T.values,0)))) # Reshape
     n_lon = np.rad2deg(grid.grid_center_lon.values.reshape(tuple(np.flip(grid.grid_dims.T.values,0)))) # Reshape
+    grid_imask = grid.grid_imask.values.reshape(tuple(np.flip(grid.grid_dims.T.values,0))) # Reshape
     
     nj = xr.DataArray(np.arange(0,n_lat.shape[0],1), dims=('nj')) # Make indices
     ni = xr.DataArray(np.arange(0,n_lat.shape[1],1), dims=('ni'))
     lat = xr.DataArray(n_lat, dims=('nj','ni'), coords={'nj':nj, 'ni':ni})
     lon = xr.DataArray(n_lon, dims=('nj','ni'), coords={'nj':nj, 'ni':ni})
+    imask = xr.DataArray(grid_imask, dims=('nj','ni'), coords={'nj':nj, 'ni':ni}).astype('bool') # int to bool
     
     if model=='NSIDC':
         lat_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lat')
         lon_b = cell_bounds_to_corners(gridinfo=grid, varname='grid_corner_lon')
-    elif model=='GFDL':
+    elif model=='GFDL' or model=='piomas':
         lat_b = cell_bounds_to_corners_GFDL(gridinfo=grid, varname='grid_corner_lat')
         lon_b = cell_bounds_to_corners_GFDL(gridinfo=grid, varname='grid_corner_lon')
     else:
         raise ValueError('model not found.')
     
     # Combine
-    return xr.Dataset({'lat':lat, 'lon':lon, 'lat_b':lat_b, 'lon_b':lon_b})
+    return xr.Dataset({'lat':lat, 'lon':lon, 'lat_b':lat_b, 'lon_b':lon_b, 'imask':imask})
+
+# Split GFDL grid into "top":bi-pole north and "bottom":rest
+def split_GFDL(ds_in, varnames=None):
+
+    # GFDL grid split parameters
+    j_s = 175
+    i_s = 180
+
+    # Subset "top"
+    a = ds_in[varnames].isel(nj=slice(j_s,None), ni=slice(None,i_s))
+    b = ds_in[varnames].isel(nj=slice(j_s,None), ni=slice(i_s,None))
+    b['nj'] = np.flip(a.nj, axis=0) + a.nj.max() - a.nj.min() + 1 # reverse in nj dim (reindexed below)
+    b['ni'] = np.flip(a.ni, axis=0) # flip in ni dim to align with a
+    ds_top = xr.concat([a, b.T], dim='nj')
+    if not hasattr(ds_top, 'data_vars'):  # convert to dataset if not already
+        ds_top = ds_top.to_dataset() 
+    # concat over nj dim
+    ds_top = ds_top.reindex({'nj':np.arange(ds_top.nj.min(), ds_top.nj.max()+1, 1)}) # reindex on nj to "flip" b in nj dim
+
+    c = ds_in['lat_b'].isel(nj_b=slice(j_s,ds_in.nj.size), ni_b=slice(None,i_s+1))
+    d = ds_in['lat_b'].isel(nj_b=slice(j_s,ds_in.nj_b.size), ni_b=slice(i_s,None))
+    d['nj_b'] = np.flip(np.arange(c.nj_b.max()+1, c.nj_b.max()+2+c.nj_b.size), axis=0)
+    d['ni_b'] = np.flip(c.ni_b, axis=0)
+    ds_top.coords['lat_b'] = xr.concat([c, d], dim='nj_b')
+    ds_top = ds_top.reindex({'nj_b':np.arange(ds_top.nj_b.min(), ds_top.nj_b.max()+1, 1)}) # reindex on nj to "flip" b in nj dim
+
+    # Subset "bottom"
+
+    # add overlap
+    j_s = j_s + 10 # Here we add 3 poleward cells to the "bottom" sub-grid, to allow overlap with "top" sub-grid.
+
+    ds_bottom = ds_in.isel(nj=slice(None,j_s)).drop(['lat_b','lon_b','nj_b','ni_b'])
+    ds_bottom.coords['lat_b'] = ds_in['lat_b'].isel(nj_b=slice(None,j_s+1))
+    
+    return (ds_top, ds_bottom)
+
+
+# Function that regrides top and bottom of GFLD domain
+def regrid_gfdl_split_domain(ds_all, da_top, da_bottom, regridder_top, regridder_bottom):
+    # Regrid
+    da_out_top = regridder_top(da_top)
+    da_out_bottom = regridder_bottom(da_bottom)
+
+    # Mask by latitude
+    lat_split = ds_all.lat.isel(nj=175).min() # Get the latitude where model domain was split on
+    lat_split_2 = ds_all.lat.isel(nj=175+5).max() #
+    da_out_top = da_out_top.where( (da_out_top.lat>=lat_split).values )
+    da_out_bottom = da_out_bottom.where( (da_out_bottom.lat<lat_split_2).values )
+
+    # Add dropped coords
+    da_out_top['fore_time'] = ds_all.fore_time
+    da_out_bottom['fore_time'] = ds_all.fore_time
+
+    # Merge "top" and "bottom"
+    da_all_out = da_out_top.combine_first(da_out_bottom)
+
+    return da_all_out
+
 
 # Split tripolar grid by 65 N
 def split_by_lat(ds, latVal=65.0, want=None):
@@ -188,6 +240,59 @@ def split_by_lat(ds, latVal=65.0, want=None):
     else:
          raise ValueError('Value for want not found. Use above or below.')
     return ds_out
+
+
+def agg_by_domain(da_grid=None, ds_region=None):
+    # TODO: add check for equal dims
+    ds_list = []
+    for cd in ds_region.nregions:
+        # Get name
+        region_name = ds_region.region_names.sel(nregions=cd).item(0).decode("utf-8") 
+        # Check we want it (exclude some regions)
+        if not region_name in ['Ice-free Oceans  ', 'null             ',
+                               'land outline     ', 'land             ' ]:
+            # Make mask
+            cmask = ds_region.mask==cd 
+            # Multiple by cell area to get area of sea ice
+            da_avg = da_grid.where(cmask) * ds_region.area.where(cmask)
+            # Sum up over current domain and convert to millions of km^2
+            da_avg = da_avg.sum(dim='x').sum(dim='y') / (10**6)
+            # Add domain name
+            da_avg['nregions'] = cd
+            da_avg['region_names'] = region_name
+            ds_list.append(da_avg)
+    return xr.concat(ds_list, dim='nregions')
+
+def get_season_start_date(ctime):
+    X = ctime.astype(object)
+    if X.month<8:
+        yyyy = X.year-1
+    else:
+        yyyy = X.year
+    return np.datetime64(str(yyyy)+'-09-01')
+
+
+def read_piomas_scalar_monthly(f):
+    xDim = 120
+    yDim = 360
+    yyyy = c_files[0].split('.')[1].split('H')[1] # Get year to split out dates
+    with open(f, 'rb') as fid:
+        arr = np.fromfile(fid, np.float32).reshape(-1, xDim, yDim)
+    # Build dates
+    time = np.arange(yyyy+'-01', str(np.int(yyyy)+1)+'-01', dtype='datetime64[M]')
+    return xr.DataArray(arr, dims =('time','nj', 'ni'), coords={'time':time})
+
+def read_piomas_scalar_daily(f, varname=None):
+    xDim = 120
+    yDim = 360
+    yyyy = f.split('.')[1].split('H')[1] # Get year to split out dates
+    with open(f, 'rb') as fid:
+        arr = np.fromfile(fid, np.float32).reshape(-1, xDim, yDim)
+    # Build dates
+#     time = np.arange(yyyy+'-01', str(np.int(yyyy)+1)+'-01', dtype='datetime64[D]').astype('datetime64[ns]')
+    time = pd.date_range(yyyy+'-01-01', yyyy+'-12-31')
+    da = xr.DataArray(arr, name=varname, dims =('time','nj', 'ni'), coords={'time':time[0:arr.shape[0]]})
+    return da.to_dataset() # push to data set so we can add more coords later
     
     
 ############################################################################
@@ -198,12 +303,28 @@ def plot_model_ensm(ds=None, axin=None, labelin=None, color='grey', marker=None)
     # TODO: too slow, need to speed up
     labeled = False
     for e in ds.ensemble:
-        for it in ds.init_time:
-            if labeled:
-                labelin = '_nolegend_'
-            axin.plot(ds.fore_time.sel(init_time=it), 
-                      ds.sel(ensemble=e).sel(init_time=it), label=labelin, color=color, marker=marker)
-            labeled = True
+        if labeled:
+            labelin = '_nolegend_'
+        # Check if it has multiple init_times
+        if 'init_time' in ds.dims:
+            for it in ds.init_time:
+                
+                axin.plot(ds.fore_time.sel(init_time=it), 
+                          ds.sel(ensemble=e).sel(init_time=it), label=labelin, color=color, marker=marker)
+                
+        else: # just one init_time
+            axin.plot(ds.fore_time, 
+                          ds.sel(ensemble=e), label=labelin, color=color, marker=marker)
+        labeled = True
+            
+def polar_axis():
+    '''cartopy geoaxes centered at north pole'''
+    f = plt.figure(figsize=(6, 5))
+    ax = plt.axes(projection=ccrs.NorthPolarStereo(central_longitude=-45))
+    ax.coastlines(linewidth=0.75, color='black', resolution='50m')
+    ax.gridlines(crs=ccrs.PlateCarree(), linestyle='-')
+    ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
+    return (f, ax)
             
 ############################################################################
 # Evaluation functions
@@ -280,6 +401,53 @@ def NRMSE(ds_mod, ds_obs, sigma):
 
 
 
+# Split GFDL grid into "top":bi-pole north and "bottom":rest
+# def split_GFDL(ds_in):
+
+#     # GFDL grid split parameters
+#     j_s = 175
+#     i_s = 180
+
+#     # Top
+#     data_correct = np.r_[ds_in['sic'][j_s:, :i_s], 
+#                          np.flipud(np.fliplr(ds_in['sic'][j_s:, i_s:]))]
+
+#     lon_correct = np.r_[ds_in['lon'][j_s:, :i_s], 
+#                         np.flipud(np.fliplr(ds_in['lon'][j_s:, i_s:]))]
+#     lat_correct = np.r_[ds_in['lat'][j_s:, :i_s], 
+#                         np.flipud(np.fliplr(ds_in['lat'][j_s:, i_s:]))]
+
+#     lon_b_correct = xr.DataArray(np.r_[ds_in['lon_b'][j_s:ds_in.nj.size, :(i_s + 1)], 
+#                         np.flipud(np.fliplr(ds_in['lon_b'][j_s:ds_in.nj_b.size, i_s:]))], dims=('nj_b','ni_b'))
+
+#     lat_b_correct = xr.DataArray(np.r_[ds_in['lat_b'][j_s:ds_in.nj.size, :(i_s + 1)], 
+#                         np.flipud(np.fliplr(ds_in['lat_b'][j_s:ds_in.nj_b.size, i_s:]))], dims=('nj_b','ni_b'))
+
+
+#     ds_top_C = xr.DataArray(data_correct, dims=('nj','ni'), coords={'lat':( ('nj','ni'), lat_correct), 
+#                                                                   'lon':( ('nj','ni'), lon_correct)})
+
+#     ds_top = xr.Dataset(data_vars={'sic':ds_top_C}, coords={'lat_b':lat_b_correct, 'lon_b':lon_b_correct})
+
+#     # Bottom
+
+#     # add overlap
+#     j_s = j_s + 3 # Here we add 3 poleward cells to the "bottom" sub-grid, to allow overlap with "top" sub-grid.
+
+#     data_correct_bottom = ds_in['sic'][:j_s, :]
+
+#     lon_bottom = ds_in['lon'][:j_s, :]
+#     lat_bottom = ds_in['lat'][:j_s, :]
+
+#     lon_b_bottom = ds_in['lon_b'][:j_s+1, :]
+#     lat_b_bottom = ds_in['lat_b'][:j_s+1, :]
+
+#     ds_bottom_C = xr.DataArray(data_correct_bottom, dims=('nj','ni'), coords={'lat':( ('nj','ni'), lat_bottom), 
+#                                                                   'lon':( ('nj','ni'), lon_bottom)})
+
+#     ds_bottom = xr.Dataset(data_vars={'sic':ds_bottom_C}, coords={'lat_b':lat_b_bottom, 'lon_b':lon_b_bottom})
+
+#     return (ds_top, ds_bottom)
 
 
 
