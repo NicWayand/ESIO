@@ -5,7 +5,8 @@ from scipy import stats
 import scipy
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
-
+import seaborn as sns
+import itertools
 
 ''' Functions to process sea ice renalysis, reforecasts, and forecasts.'''
 
@@ -16,8 +17,7 @@ import cartopy.crs as ccrs
 # Regridding/Inporting functions
 ############################################################################
 
-def preprocess_time(x):
-    # TODO: if monthly, use begining of period time step
+def preprocess_time_OLD(x):
     ''' Convert time to initialization and foreast lead time (to fit into orthoganal matrices)
     Input Dims: lat x lon x Time
     Output Dims: lat x lon x init_time x fore_time_i'''
@@ -41,6 +41,28 @@ def preprocess_time(x):
     x.coords['fore_time'] = xr.DataArray(xtimes, dims=('fore_time_i'), coords={'fore_time_i':x.fore_time_i})
     x.fore_time.attrs['comments'] = 'Date of forecast'
     
+    return x
+
+
+def preprocess_time(x):
+    ''' Convert time to initialization and foreast lead time (to fit into orthoganal matrices)
+    Input Dims: lat x lon x Time
+    Output Dims: lat x lon x init_time x fore_time'''
+    
+    # Set record dimension of 'time' to the beinging of averaging period 'average_T1'
+    x['time'] = x.average_T1
+    
+    # Grab forecast times
+    xtimes = xr.decode_cf(x).time.values;
+    
+    # Get initialization time
+    x.coords['init_time'] = xtimes[0] # get first one
+    x.coords['init_time'].attrs['comments'] = 'Initilzation time of forecast'
+
+    # Get forecast time (as timedeltas from init_time)
+    x.rename({'time':'fore_time'}, inplace=True);
+    x.coords['fore_time'] = xtimes - xtimes[0]
+   
     return x
 
 # Open a single ensemble member
@@ -295,6 +317,14 @@ def read_piomas_scalar_daily(f, varname=None):
     return da.to_dataset() # push to data set so we can add more coords later
     
     
+def expand_to_sipn_dims(ds):
+    # Force output datasets have ensemble, init_time, and fore_time as dimensions (otherwise add empty ones)
+    required_dims = ['ensemble', 'init_time', 'fore_time']
+    for d in required_dims:
+        if d not in ds.dims:
+            ds = ds.expand_dims(d)
+    return ds
+    
 ############################################################################
 # Plotting functions
 ############################################################################
@@ -316,6 +346,44 @@ def plot_model_ensm(ds=None, axin=None, labelin=None, color='grey', marker=None)
             axin.plot(ds.fore_time, 
                           ds.sel(ensemble=e), label=labelin, color=color, marker=marker)
         labeled = True
+        
+def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time', 
+                    marker=None, init_dot=True, linestyle='-'):
+    labeled = False
+    init_label = 'Initialization'
+    
+    if color=='cycle_init_time':
+        cmap_c = itertools.cycle(sns.color_palette("GnBu_d", ds.init_time.size))
+    elif color=='cycle_ensemble':
+        cmap_c = itertools.cycle(sns.color_palette("GnBu_d", ds.ensemble.size))
+    else:
+        ccolor = color # Plot all lines with one color
+        
+    for e in ds.ensemble:    
+            cds = ds.sel(ensemble=e)
+            
+            if color=='cycle_ensemble':
+                ccolor = next(cmap_c)
+            
+            for it in ds.init_time:
+                
+                if labeled:
+                    labelin = '_nolegend_'
+                    init_label = '_nolegend_'
+
+                if color=='cycle_init':
+                    ccolor = next(cmap_c)        
+                    
+                # Plot line
+                x = cds.fore_time + cds.init_time.sel(init_time=it)
+                y = cds.sel(init_time=it)
+                axin.plot(x, y, label=labelin, color=ccolor, marker=marker)
+                
+                # (optional) plot dot at initialization time
+                if init_dot:
+                    axin.plot(x[0], y[0], marker='*', linestyle='None', color='red', label=init_label)
+
+                labeled = True
             
 def polar_axis():
     '''cartopy geoaxes centered at north pole'''

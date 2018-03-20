@@ -29,7 +29,7 @@ class esiodata(object):
         # Add grid file
         self.obs[obs_name]['grid'] = os.path.join(self.grid_dir, grid_file)
         
-    def add_model(self, mod_name=None, grid_file=None):
+    def add_model(self, mod_name=None, model_label=None, grid_file=None):
         """Add a model"""
         mod_dir = os.path.join(self.data_dir, 'model', mod_name)
         self.make_dir(mod_dir)
@@ -56,6 +56,10 @@ class esiodata(object):
         
         # Add grid file
         self.model[mod_name]['grid'] = os.path.join(self.grid_dir, grid_file)
+        
+        # Add model label name
+        self.model[mod_name]['model_label'] = model_label
+        
 
         
     def save(self, filename='ESIO_DATA.pkl'):
