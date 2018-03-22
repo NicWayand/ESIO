@@ -4,8 +4,8 @@ import os
 
 # Configuration info about this model
 prefix = "yopp_ci_"
-data_dir = r'/home/disk/sipn/nicway/data/model/S2S/yopp/'
-native_grib = os.path.join(data_dir, 'native_grib')
+data_dir = r'/home/disk/sipn/nicway/data/model/yopp/forecast'
+native_grib = os.path.join(data_dir, 'native')
 # Note:
 # This dataset is available with 3 day delay.
 
