@@ -348,10 +348,13 @@ def plot_model_ensm(ds=None, axin=None, labelin=None, color='grey', marker=None)
         labeled = True
         
 def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time', 
-                    marker=None, init_dot=True, linestyle='-'):
+                    marker=None, init_dot=True, init_dot_label=True, linestyle='-'):
     labeled = False
-    init_label = 'Initialization'
-    
+    if init_dot:
+        init_label = 'Initialization'
+    else:
+        init_label = '_nolegend_'
+        
     if color=='cycle_init_time':
         cmap_c = itertools.cycle(sns.color_palette("GnBu_d", ds.init_time.size))
     elif color=='cycle_ensemble':
@@ -373,16 +376,18 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
 
                 if color=='cycle_init':
                     ccolor = next(cmap_c)        
-                    
-                # Plot line
-                x = cds.fore_time + cds.init_time.sel(init_time=it)
-                y = cds.sel(init_time=it)
-                axin.plot(x, y, label=labelin, color=ccolor, marker=marker)
+                  
+                # Grab current data
+#                 x = cds.fore_time + cds.init_time.sel(init_time=it)
+#                 y = cds.sel(init_time=it)
                 
                 # (optional) plot dot at initialization time
                 if init_dot:
-                    axin.plot(x[0], y[0], marker='*', linestyle='None', color='red', label=init_label)
-
+                    axin.plot((cds.fore_time + cds.init_time.sel(init_time=it))[0], cds.sel(init_time=it)[0], marker='*', linestyle='None', color='red', label=init_label)
+                
+                # Plot line
+                axin.plot(cds.fore_time + cds.init_time.sel(init_time=it), cds.sel(init_time=it), label=labelin, color=ccolor, marker=marker, linestyle=linestyle)
+                
                 labeled = True
             
 def polar_axis():
