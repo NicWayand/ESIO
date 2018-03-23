@@ -11,7 +11,7 @@
 # - Saves to netcdf files grouped by year
 
 
-# In[ ]:
+# In[1]:
 
 
 # Standard Imports
@@ -38,7 +38,7 @@ import esiodata as ed
 # import read_SeaIceConcentration_PIOMAS as piomas
 
 
-# In[ ]:
+# In[2]:
 
 
 # General plotting settings
@@ -46,20 +46,21 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[3]:
 
 
 E = ed.esiodata.load()
 # Directories
 model='yopp'
 runType='forecast'
+updateall = False
 data_dir = E.model[model][runType]['native']
 data_out = E.model[model][runType]['sipn_nc']
 model_grid_file = E.model[model]['grid']
 stero_grid_file = E.obs['NSIDC_0051']['grid']
 
 
-# In[ ]:
+# In[4]:
 
 
 obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
@@ -68,14 +69,14 @@ obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[ ]:
+# In[5]:
 
 
 # Regridding Options
 method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[2]:
+# In[6]:
 
 
 ## TODO
@@ -83,14 +84,18 @@ method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', '
 # - Get lat lon bounds 
 
 
-# In[ ]:
+# In[7]:
 
 
 all_files = glob.glob(os.path.join(data_dir, 'yopp*ci*.grib'))
 print("Found ",len(all_files)," files.")
+if updateall:
+    print("Updating all files...")
+else:
+    print("Only updating new files")
 
 
-# In[ ]:
+# In[10]:
 
 
 weights_flag = False # Flag to set up weights have been created
@@ -98,6 +103,12 @@ weights_flag = False # Flag to set up weights have been created
 cvar = 'sic'
 
 for cf in all_files:
+    # Check if already imported and skip (unless updateall flag is True)
+    f_out = os.path.join(data_out, os.path.basename(cf).split('.')[0]+'_Stereo.nc') # netcdf file out 
+    if not updateall:
+        if os.path.isfile(f_out):
+            print("Skipping ", os.path.basename(cf), " already imported.")
+            continue # Skip, file already imported
 
     ds = xr.open_dataset(cf, engine='pynio')
 
@@ -135,7 +146,7 @@ for cf in all_files:
     var_out = esio.expand_to_sipn_dims(var_out)
 
     # # Save regridded to netcdf file
-    f_out = os.path.join(data_out, os.path.basename(cf).split('.')[0]+'_Stereo.nc')
+    
     var_out.to_netcdf(f_out)
     var_out = None # Memory clean up
     print('Saved ', f_out)

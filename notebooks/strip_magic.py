@@ -7,6 +7,8 @@ if len(sys.argv) != 2:
 # Get name of configuration file/module
 nbconvert_file = sys.argv[1]
 
+# These functions were provided by https://github.com/rgerkin
+# https://github.com/jupyter/nbconvert/issues/503
 def strip_line_magic(line,magics_allowed):
         import re
         matches = re.findall("run_line_magic\(([^]]+)", line)

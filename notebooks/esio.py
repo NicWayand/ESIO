@@ -398,6 +398,17 @@ def polar_axis():
     ax.gridlines(crs=ccrs.PlateCarree(), linestyle='-')
     ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
     return (f, ax)
+
+def multi_polar_axis(ncols=4, nrows=4):
+    # Create a grid of plots
+    f, (axes) = plt.subplots(ncols=ncols, nrows=nrows, subplot_kw={'projection': ccrs.NorthPolarStereo(central_longitude=-45)})
+    f.set_size_inches(15,15)
+    axes = axes.reshape(-1)
+    for ax in axes:  
+        ax.coastlines(linewidth=0.75, color='black', resolution='50m')
+        ax.gridlines(crs=ccrs.PlateCarree(), linestyle='-')
+        ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
+    return (f, axes)
             
 ############################################################################
 # Evaluation functions
