@@ -18,7 +18,7 @@ fi
 $REPO_DIR"/scripts/download_scripts/download_NSIDC_0081.sh" &
 
 # Model downloads
-#python $REPO_DIR"/scripts/download_scripts/Download_YOPP_ECMWF.py" &
+python $REPO_DIR"/scripts/download_scripts/Download_YOPP_ECMWF.py" &
 
 wait # Below depends on above
 
@@ -36,7 +36,6 @@ source activate esio
 
 wait # Below depends on above
 
-
 # Make Plots
 # Availblity plots
 python "./plot_forecast_availability.py"
@@ -44,7 +43,8 @@ python "./plot_forecast_availability.py"
 # Observations
 python "./plot_observations.py"
 
-# Make some plots
-python "./plot_observations.py"
+# Models
+python "./plot_all_model_maps.py"
+python "./plot_model_forecasts.py"
 
 echo Finished NRT daily downloads.
