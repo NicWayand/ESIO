@@ -16,6 +16,7 @@ fi
 
 # Call all download scripts that grab near-real-time data
 $REPO_DIR"/scripts/download_scripts/download_NSIDC_0081.sh" &
+$REPO_DIR"/scripts/download_scripts/download_NSIDC_extents.sh" &
 
 # Model downloads
 python $REPO_DIR"/scripts/download_scripts/Download_YOPP_ECMWF.py" &
@@ -28,6 +29,7 @@ cd $REPO_DIR"/notebooks/" # Need to move here as some esiodata functions assume 
 # Import Observations to sipn format
 which python
 python "./SeaIceObs_native_2_netcdf.py"
+python "./Import_NSIDC_Extents.py"
 
 # Import Models to sipn format
 source activate test_nio # Requires new env
@@ -38,13 +40,13 @@ wait # Below depends on above
 
 # Make Plots
 # Availblity plots
-python "./plot_forecast_availability.py"
+python "./plot_forecast_availability.py" &
 
 # Observations
-python "./plot_observations.py"
+python "./plot_observations.py" &
 
 # Models
-python "./plot_all_model_maps.py"
-python "./plot_model_forecasts.py"
+python "./plot_all_model_maps.py" &
+python "./plot_model_forecasts.py" &
 
-echo Finished NRT daily downloads.
+echo Finished NRT script.

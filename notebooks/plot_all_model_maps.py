@@ -5,14 +5,14 @@
 
 
 '''
-Plot model forecast avaibility
+Plot forecast maps with all available models.
 '''
 
 
 
 
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt, mpld3
 from collections import OrderedDict
 import itertools
@@ -43,7 +43,16 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 # Define models and variables to plot
 models = ['yopp','gfdlsipn']
 runType = 'forecast'
-variables = ['sic', 'hi']
+variables = ['hi', 'sic']
+
+
+# In[3]:
+
+
+weeks = pd.to_timedelta(np.arange(0,5,1), unit='W')
+months = pd.to_timedelta(np.arange(2,12,1), unit='M')
+years = pd.to_timedelta(np.arange(1,2), unit='Y') - np.timedelta64(1, 'D') # need 364 not 365
+slices = weeks.union(months).union(years).round('1d')
 
 
 # In[ ]:
@@ -95,8 +104,21 @@ for cvar in variables:
         os.makedirs(fig_dir)
 
     # Set up plotting info
-    cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues_r", 10))
-    cmap_sic.set_bad(color = 'lightgrey')
+    if cvar=='sic':
+        cmap_c = matplotlib.colors.ListedColormap(sns.color_palette("Blues_r", 10))
+        cmap_c.set_bad(color = 'lightgrey')
+        c_label = 'Sea Ice Concentration (-)'
+        c_vmin = 0
+        c_vmax = 1
+    elif cvar=='hi':
+        cmap_c = matplotlib.colors.ListedColormap(sns.color_palette("Reds_r", 10))
+        cmap_c.set_bad(color = 'lightgrey')
+        c_label = 'Sea Ice Thickness (m)'
+        c_vmin = 0
+        c_vmax = None
+    else:
+        raise ValueError("cvar not found.")
+            
 
     # Plot sea ice concentration MAPS 
     # Most recent initialization time
@@ -104,10 +126,7 @@ for cvar in variables:
     # For select forecast times
     #slices = pd.to_timedelta([0, 1 ,2 ,3 ,4*1, 4*2, 4*3, 4*4, 4*5, 4*6, 4*7, 4*8, 4*9, 4*10, 4*11, 4*12], unit='W')
     
-    weeks = pd.to_timedelta(np.arange(0,5,1), unit='W')
-    months = pd.to_timedelta(np.arange(2,12,1), unit='M')
-    years = pd.to_timedelta(np.arange(1,2), unit='Y') - np.timedelta64(1, 'D') # need 364 not 365
-    slices = weeks.union(months).union(years).round('1d')
+
     
     print("Starting plots...")
     for it in [ds_mm.init_time[0]]:
@@ -125,13 +144,13 @@ for cvar in variables:
                 p = c_da.sel(model=cmod).plot.pcolormesh(ax=axes[i], x='lon', y='lat', 
                                       transform=ccrs.PlateCarree(),
                                       add_colorbar=False,
-                                      cmap=cmap_sic,
-                                      vmin=0, vmax=1)
+                                      cmap=cmap_c,
+                                      vmin=c_vmin, vmax=c_vmax)
                 axes[i].set_title(E.model[cmod.model.item(0)]['model_label'])
             
             f.subplots_adjust(right=0.8)
             cbar_ax = f.add_axes([0.85, 0.15, 0.05, 0.7])
-            f.colorbar(p, cax=cbar_ax, label='Sea Ice Concentration (-)')
+            f.colorbar(p, cax=cbar_ax, label=c_label)
 
             # Set title of all plots
             init_time =  pd.to_datetime( c_da.init_time.values).strftime('%Y-%m-%d-%H:%M')

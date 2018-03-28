@@ -70,9 +70,11 @@ def open_1_member(cfiles, e):
     ds = xr.open_mfdataset(cfiles, concat_dim='init_time', decode_times=False, 
                            preprocess=lambda x: preprocess_time(x),
                            autoclose=True)
+    
     # Sort init_time (if more than one)
     if ds.init_time.size>1:
         ds = ds.reindex(init_time=sorted(ds.init_time.values))
+        
     # Add ensemble coord
     ds.coords['ensemble'] = e
     return ds
@@ -104,15 +106,18 @@ def naive_fast(latvar,lonvar,lat0,lon0):
     return iy_min,ix_min
 
 def mask_common_extent(ds_obs, ds_mod, max_obs_missing=0.1):
+    
     # Mask out areas where either observations or model are missing
     mask_obs = ds_obs.isnull().sum(dim='time') / ds_obs.time.size # Get fraction of missing for each pixel
-    mask_mod = ds_mod.sic.isel(fore_time_i=0).isel(init_time=0).isel(ensemble=0).notnull() # Grab one model to get extent
+    mask_mod = ds_mod.isel(fore_time=0).isel(init_time=0).isel(ensemble=0).notnull() # Grab one model to get extent
     mask_comb = (mask_obs <= max_obs_missing) & (mask_mod) # Allow 10% missing in observations
-    mask_comb = mask_comb.drop(['ensemble','fore_time_i','init_time','fore_time']) # Drop unneeded variables
+    mask_comb = mask_comb.squeeze() #(['ensemble','fore_time','init_time','fore_time']) # Drop unneeded variables
+    
     # Apply and return
     ds_obs_out = ds_obs.where(mask_comb)
     ds_mod_out = ds_mod.where(mask_comb)
     ds_mod_out.coords['fore_time'] = ds_mod.fore_time # add back coords that were dropped
+    
     return (ds_obs_out, ds_mod_out)
 
 def cell_bounds_to_corners(gridinfo=None, varname=None):
@@ -421,21 +426,28 @@ def format_obs_like_model(ds_mod, ds_obs):
     ds_obs_X = (ds_mod.copy() * np.nan).load() # Have to call load here to assign ie below
     for (i, e) in enumerate(ds_obs_X.ensemble):
         for (j, it) in enumerate(ds_obs_X.init_time):
-            ds_obs_X[i, j, :] = ds_obs.sel(time=ds_mod.fore_time.sel(init_time=it))
+            ds_obs_X[i, j, :] = ds_obs.sel(time = ( ds_mod.init_time.sel(init_time=it) + ds_mod.fore_time).values )
+    
     return ds_obs_X
 
 def trim_common_times(ds_obs, ds_mod):
     ''' Trim an observed and modeled dataset to common start and end dates (does not
-    insure internal times are the same) ''' 
+    insure internal times are the same) '''
     
     # Get earliest and latest times
-    T_start = np.max([ds_obs.time.values[0], ds_mod.fore_time.min().values])
-    T_end = np.min([ds_obs.time.values[-1], ds_mod.fore_time.max().values])
+    T_start = np.max([ds_obs.time.values[0], ds_mod.init_time.min().values])
+    T_end = np.min([ds_obs.time.values[-1], (ds_mod.init_time.max() + ds_mod.fore_time.max()).values])
     print(T_start, T_end)
-    # Subset
+    assert T_start < T_end, 'Start must be before End!'
+
+    # Subset Obs
     ds_obs_out = ds_obs.where((ds_obs.time >= T_start) & (ds_obs.time <= T_end), drop=True)
-    ds_mod_out = ds_mod.where((ds_mod.fore_time >= T_start) & (ds_mod.fore_time <= T_end) &
-                              (ds_mod.init_time >= T_start) & (ds_mod.init_time <= T_end), drop=True)
+    # Subset Model
+    ds_mod_out = ds_mod.where(((ds_mod.init_time >= T_start) & 
+                              ((ds_mod.init_time+ds_mod.fore_time <= T_end).all(dim='fore_time'))), drop=True)
+
+    assert (ds_mod_out.init_time+ds_mod_out.fore_time).max().values<=T_end, 'Model out contains valid times greater then end'
+
     return ds_obs_out, ds_mod_out
 
 def clim_mu_sigma(ds_obs, method='MK'):
@@ -465,7 +477,7 @@ def NRMSE(ds_mod, ds_obs, sigma):
     assert ds_mod.dims==ds_obs.dims
     
     #TODO: Uncertain here to take mean over init_time or fore_time ????
-    a = xr.ufuncs.sqrt( ((ds_mod - ds_obs)**2).mean(dim='ensemble').mean(dim='fore_time_i') )
+    a = xr.ufuncs.sqrt( ((ds_mod - ds_obs)**2).mean(dim='ensemble').mean(dim='fore_time') )
     b = xr.ufuncs.sqrt( 2*(sigma**2) ) # add time variance for OP option
     
     NRMSE =  1 - (a / b)
@@ -473,14 +485,14 @@ def NRMSE(ds_mod, ds_obs, sigma):
 
 
 
-# def PPP(ds_mod, ds_obs):
-#     ''' potential prognostic predictability (PPP) '''
-    
-#     a = 
-#     b = 
-    
-#     PPP = 1 - a / b
-#     return PPP
+#def PPP(ds_mod, ds_obs):
+#    ''' potential prognostic predictability (PPP) '''
+
+#    a = 
+#    b = 
+
+#    PPP = 1 - a / b
+#    return PPP
 
 
 

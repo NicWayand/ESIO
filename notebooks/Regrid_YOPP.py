@@ -156,7 +156,8 @@ for cf in all_files:
 
 
 # Clean up
-regridder.clean_weight_file()  # clean-up
+if weights_flag:
+    regridder.clean_weight_file()  # clean-up
 
 
 # # Plotting
