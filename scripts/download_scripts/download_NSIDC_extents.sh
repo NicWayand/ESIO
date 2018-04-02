@@ -26,7 +26,7 @@ mkdir -p $NSIDC_extent_DIR
 
 # Download
 cd $NSIDC_extent_DIR
-wget -nH --cut-dirs=20 $data_ftp
+wget -N -nH --cut-dirs=20 $data_ftp
 
 echo "Done!"
 

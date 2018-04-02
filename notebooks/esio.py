@@ -329,6 +329,18 @@ def expand_to_sipn_dims(ds):
         if d not in ds.dims:
             ds = ds.expand_dims(d)
     return ds
+
+# Calc NSIDC median sea ice edge between 1981-2010
+def get_median_ice_edge(ds, ystart='1981', yend='2012', sic_threshold=0.15):
+    median_ice = ds.sel(time=slice(ystart, yend)).drop(['coast','land','missing'])
+    # Calc "Extent" (1 or 0)
+    median_ice['sic'] = (median_ice.sic >= sic_threshold).astype('int')
+    DOY = [x.timetuple().tm_yday for x in pd.to_datetime(median_ice.time.values)]
+    median_ice['time'] = DOY
+    median_ice.reset_coords(['hole_mask'], inplace=True)
+    median_ice = median_ice.groupby('time').median(dim='time')
+    median_ice_fill = median_ice.where(median_ice.hole_mask==0, other=1).sic # Fill in pole hole with 1 (so contours don't get made around it)
+    return median_ice_fill
     
 ############################################################################
 # Plotting functions
@@ -407,11 +419,11 @@ def polar_axis():
 def multi_polar_axis(ncols=4, nrows=4):
     # Create a grid of plots
     f, (axes) = plt.subplots(ncols=ncols, nrows=nrows, subplot_kw={'projection': ccrs.NorthPolarStereo(central_longitude=-45)})
-    f.set_size_inches(15,15)
+    f.set_size_inches(ncols*2+1, nrows*2)
     axes = axes.reshape(-1)
     for ax in axes:  
-        ax.coastlines(linewidth=0.75, color='black', resolution='50m')
-        ax.gridlines(crs=ccrs.PlateCarree(), linestyle='-')
+        ax.coastlines(linewidth=0.2, color='black', resolution='50m')
+        ax.gridlines(crs=ccrs.PlateCarree(), linestyle='--', linewidth=0.20, color='grey')
         ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
     return (f, axes)
             

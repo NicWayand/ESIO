@@ -23,31 +23,47 @@ def read_NSIDC_binary(cfile, x, y, product=None):
     n_cols=304
     with open(cfile, 'rb') as fr:
         if product=='NSIDC_0051' or product=='NSIDC_0081':
+            #http://nsidc.org/data/nsidc-0051
+            #http://nsidc.org/data/nsidc-0081
             hdr = fr.read(300) 
             ice = np.fromfile(fr, dtype=np.uint8)
             ice = ice.reshape(n_rows, n_cols)
-            ice = ice / 250.
+            ice_max = 250
+            hole_mask = 251
+            coast = 253
+            land = 254
+            missing = 255
         elif product=='NSIDC_0079':
             ice = np.fromfile(fr, dtype=np.uint16)
             ice = ice.reshape(n_rows, n_cols)
-            ice = ice / 1000. 
+            ice_max = 1000.
+            hole_mask = 1100
+            coast = 9999
+            land = 1200
+            missing = 9999
         else:
             raise ValueError('product name not found')
     
     # Make xarray dataArray
-    da_sic = xr.DataArray(ice, coords={'x': x, 'y': y}, dims=('y', 'x'))
+    da_all = xr.DataArray(ice, coords={'x': x, 'y': y}, dims=('y', 'x'))
+    # Scale to (0-1) and mask out non-sic
+    ds = (da_all/ice_max)
+    ds.name = 'sic'
+    ds = ds.where(ds<=1).to_dataset()
     # Add date
-    da_sic.coords['time'] = parse_NSIDC_date(os.path.basename(cfile))
-    # Mask out non-sic
-    da_sic = da_sic.where(da_sic<=1)
-    return da_sic
+    ds.coords['time'] = parse_NSIDC_date(os.path.basename(cfile))
+    #if get_masks:
+    # Add other masks
+    ds.coords['hole_mask'] = da_all==hole_mask
+    ds.coords['coast'] = da_all==coast
+    ds.coords['land'] = da_all==land
+    ds.coords['missing'] = da_all==missing
+    
+    return ds
 
 def load_NSIDC(all_files=None, product=None):
     # Define coords
-    # Stereo projected units (m?)
-    #dx = dy = 25000
-    #x = np.arange(-3850000, +3750000, +dx)
-    #y = np.arange(+5850000, -5350000, -dy)
+
     # Indices values
     x = np.arange(0,304,1)
     y = np.arange(0,448,1)
@@ -55,7 +71,8 @@ def load_NSIDC(all_files=None, product=None):
     da_l = []
     for cf in all_files:
         da_l.append(read_NSIDC_binary(cf, x, y, product))
-    ds_sic = xr.concat(da_l, dim='time')
+    ds_sic = xr.concat(da_l, dim='time', coords='different')
+    
     return ds_sic
 
 

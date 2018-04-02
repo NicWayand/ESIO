@@ -1,3 +1,9 @@
+
+# coding: utf-8
+
+# In[ ]:
+
+
 '''
 Plot observed and modeled sea ice variables of interest.
 
@@ -46,6 +52,11 @@ ds_region.set_coords(['lat','lon'], inplace=True);
 ds_region.rename({'nx':'x', 'ny':'y'}, inplace=True);
 
 #############################################################
+
+
+# In[ ]:
+
+
 
 # Get regional averages
 da_81reg = esio.agg_by_domain(da_grid=da_81, ds_region=ds_region)
@@ -159,5 +170,7 @@ ax1.set_title('NSIDC 0081\n'+pd.to_datetime(obs2.time.values).strftime('%Y-%m-%d
              pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
 plt.tight_layout()
 f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map_1Week_Change.png'),bbox_inches='tight',dpi=200)
+
+
 
 
