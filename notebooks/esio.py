@@ -7,11 +7,9 @@ import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
 import seaborn as sns
 import itertools
+import os
 
 ''' Functions to process sea ice renalysis, reforecasts, and forecasts.'''
-
-# TODO: make model independent
-# TODO: remove hard coded paths
 
 ############################################################################
 # Regridding/Inporting functions
@@ -84,10 +82,10 @@ def readBinFile(f, nx, ny):
         data_array = np.fromfile(fid, np.int32)*1e-5
     return data_array.reshape((nx,ny))
 
-def get_stero_N_grid():
+def get_stero_N_grid(grid_dir):
     # Get info about target grid
-    flat = r'/home/disk/sipn/nicway/data/grids/psn25lats_v3.dat'
-    flon = r'/home/disk/sipn/nicway/data/grids/psn25lons_v3.dat'
+    flat = os.path.join(grid_dir,'psn25lats_v3.dat')
+    flon = os.path.join(grid_dir,'psn25lons_v3.dat')
     NY=304; 
     NX=448;
     lat = readBinFile(flat, NX, NY).T
@@ -365,11 +363,14 @@ def plot_model_ensm(ds=None, axin=None, labelin=None, color='grey', marker=None)
         labeled = True
         
 def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time', 
-                    marker=None, init_dot=True, init_dot_label=True, linestyle='-'):
+                    marker=None, init_dot=True, init_dot_label=True, linestyle='-', 
+                    no_init_label=False):
     labeled = False
     if init_dot:
         init_label = 'Initialization'
     else:
+        init_label = '_nolegend_'
+    if no_init_label:
         init_label = '_nolegend_'
         
     if color=='cycle_init_time':
@@ -393,10 +394,6 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
 
                 if color=='cycle_init':
                     ccolor = next(cmap_c)        
-                  
-                # Grab current data
-#                 x = cds.fore_time + cds.init_time.sel(init_time=it)
-#                 y = cds.sel(init_time=it)
                 
                 # (optional) plot dot at initialization time
                 if init_dot:
@@ -413,18 +410,26 @@ def polar_axis():
     ax = plt.axes(projection=ccrs.NorthPolarStereo(central_longitude=-45))
     ax.coastlines(linewidth=0.75, color='black', resolution='50m')
     ax.gridlines(crs=ccrs.PlateCarree(), linestyle='-')
-    ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
+    #ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
+    # Full NSIDC extent
+    ax.set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45))
     return (f, ax)
 
-def multi_polar_axis(ncols=4, nrows=4):
+def multi_polar_axis(ncols=4, nrows=4, Nplots=None):
+    if not Nplots:
+        Nplots = ncols*nrows
     # Create a grid of plots
     f, (axes) = plt.subplots(ncols=ncols, nrows=nrows, subplot_kw={'projection': ccrs.NorthPolarStereo(central_longitude=-45)})
-    f.set_size_inches(ncols*2+1, nrows*2)
+    f.set_size_inches(ncols*1.5, nrows*2)
     axes = axes.reshape(-1)
-    for ax in axes:  
-        ax.coastlines(linewidth=0.2, color='black', resolution='50m')
-        ax.gridlines(crs=ccrs.PlateCarree(), linestyle='--', linewidth=0.20, color='grey')
-        ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
+    for (i, ax) in enumerate(axes):  
+        axes[i].coastlines(linewidth=0.2, color='black', resolution='50m')
+        axes[i].gridlines(crs=ccrs.PlateCarree(), linestyle='--', linewidth=0.20, color='grey')
+        #ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
+        # Full NSIDC extent
+        axes[i].set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45)) 
+        if i>=Nplots-1:
+            f.delaxes(axes[i])  
     return (f, axes)
             
 ############################################################################

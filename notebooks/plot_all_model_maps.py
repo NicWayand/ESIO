@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -37,7 +37,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[2]:
 
 
 def remove_small_contours(p, thres=10):
@@ -55,26 +55,24 @@ def remove_small_contours(p, thres=10):
                 del(level.get_paths()[kp])  # no remove() for Path objects:(
 
 
-# In[ ]:
+# In[3]:
 
 
-# Define models and variables to plot
-# models = ['yopp','gfdlsipn']
+# Plotting Info
 runType = 'forecast'
 variables = ['sic'] #, 'hi']
 
 
-# In[ ]:
+# In[4]:
 
 
 # Initialization times to plot
 cd = datetime.datetime.now()
-# Initialization times (from first of current month)
-# init_slice = np.arange(datetime.datetime(cd.year,cd.month,1), cd, datetime.timedelta(days=1))
-init_slice = np.arange(cd - datetime.timedelta(days=30), cd, datetime.timedelta(days=1))
+cd = datetime.datetime(cd.year, cd.month, cd.day) # Set hour min sec to 0. 
+init_slice = np.arange(cd - datetime.timedelta(days=35), cd, datetime.timedelta(days=1))
 
 
-# In[ ]:
+# In[5]:
 
 
 # Forecast times to plot
@@ -85,7 +83,7 @@ slices = weeks.union(months).union(years).round('1d')
 da_slices = xr.DataArray(slices, dims=('fore_time'))
 
 
-# In[ ]:
+# In[6]:
 
 
 #############################################################
@@ -93,22 +91,19 @@ da_slices = xr.DataArray(slices, dims=('fore_time'))
 #############################################################
 E = ed.esiodata.load()
 
-# Load in Observations
-ds_51 = xr.open_dataset(E.obs['NSIDC_0051']['sipn_nc']+'/NSIDC_0051.nc')
-# ds_81 = xr.open_dataset(E.obs['NSIDC_0081']['sipn_nc']+'/NSIDC_0081.nc')
-# ds_79 = xr.open_dataset(E.obs['NSIDC_0079']['sipn_nc']+'/NSIDC_0079.nc')
-# # Merge based on order
-# ds_obs = ds_79.combine_first(ds_51).combine_first(ds_81)
-
-
-# In[ ]:
-
-
 # Get median ice edge
+ds_51 = xr.open_dataset(E.obs['NSIDC_0051']['sipn_nc']+'/NSIDC_0051.nc')
 median_ice_fill = esio.get_median_ice_edge(ds_51)
+ds_51 = None
 
 
-# In[ ]:
+# In[7]:
+
+
+ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/NSIDC_0081.nc')
+
+
+# In[8]:
 
 
 # print(ds_51.time.min().values, ds_51.time.max().values)
@@ -116,14 +111,22 @@ median_ice_fill = esio.get_median_ice_edge(ds_51)
 # print(ds_79.time.min().values, ds_79.time.max().values)
 
 
+# In[9]:
+
+
+# Define models to plot
+models_2_plot = list(E.model.keys())
+models_2_plot = [x for x in models_2_plot if x!='piomas'] # remove some models
+
+
 # In[ ]:
 
 
 # Get # of models and setup subplot dims
-Nmod = len(E.model.keys())
+Nmod = len(E.model.keys()) + 1 #(+1 for obs)
 Nr = int(np.floor(np.sqrt(Nmod)))
 Nc = int(np.ceil(Nmod/Nr))
-assert Nc*Nr>Nmod, 'Need more subplots'
+assert Nc*Nr>=Nmod, 'Need more subplots'
 
 for cvar in variables:
     
@@ -156,9 +159,10 @@ for cvar in variables:
             cs_str = format(cs, '02')
             
             # New Plot
-            (f, axes) = esio.multi_polar_axis(ncols=Nc, nrows=Nr)
+            (f, axes) = esio.multi_polar_axis(ncols=Nc, nrows=Nr, Nplots=Nmod)
             p = None # initlaize to know if we found any data
-            for (i, cmod) in enumerate(E.model.keys()):
+            for (i, cmod) in enumerate(models_2_plot):
+                i = i+1 # shift for obs
 #                 print("Checking model ", cmod, " for data...")
                 axes[i].set_title(E.model[cmod]['model_label'])
                 
@@ -220,6 +224,16 @@ for cvar in variables:
                 
                 axes[i].set_title(E.model[cmod]['model_label'])
 
+            # Plot Obs (if available)
+            if (it + ft) in ds_81.time.values:
+                ds_81.sic.sel(time=(it + ft)).plot.pcolormesh(ax=axes[0], x='lon', y='lat', 
+                                      transform=ccrs.PlateCarree(),
+                                      add_colorbar=False,
+                                      cmap=cmap_c,
+                                      vmin=c_vmin, vmax=c_vmax)
+            axes[0].set_title('Observed')
+            
+            
             # Make pretty
             f.subplots_adjust(right=0.8)
             cbar_ax = f.add_axes([0.85, 0.15, 0.05, 0.7])

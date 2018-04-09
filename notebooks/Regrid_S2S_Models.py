@@ -21,6 +21,7 @@
 import matplotlib
 import scipy
 import matplotlib.pyplot as plt
+import datetime
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import numpy as np
@@ -50,8 +51,8 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 E = ed.esiodata.load()
 # Directories
-all_models = ['bom', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
-          'jma', 'metreofr', 'ncep', 'ukmo', 'eccc', 'kma']
+all_models = ['ukmetofficesipn', 'ecmwfsipn', 'bom', 'ncep', 'ukmo', 'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
+         'jma', 'metreofr']
 runType='forecast'
 updateall = False
 
@@ -74,7 +75,7 @@ obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[7]:
+# In[17]:
 
 
 # Store dictionary to convert each model variable names to sipn syntax
@@ -93,9 +94,22 @@ var_dic['bom'] = {'initial_time0_hours':'init_time',
                  'forecast_time0':'fore_time',
                  'ICEC_P11_L1_GGA0_avg24h':'sic'}
 
+# C3S models
+var_dic['ukmetofficesipn'] = {'initial_time1_hours':'init_time',
+                 'g0_lat_3':'lat', 'g0_lon_4':'lon',
+                 'forecast_time2':'fore_time',
+                 'ensemble0':'ensemble',
+                 'CI_GDS0_SFC':'sic'}
+var_dic['ecmwfsipn'] = {'initial_time1_hours':'init_time',
+                 'g0_lat_2':'lat', 'g0_lon_3':'lon',
+                 'forecast_time1':'fore_time',
+                 'ensemble0':'ensemble',
+                 'CI_GDS0_SFC':'sic'}
+# list of models that have month init times
+monthly_init_model = ['ecmwfsipn']
 
 
-# In[8]:
+# In[18]:
 
 
 ## TODO
@@ -103,7 +117,7 @@ var_dic['bom'] = {'initial_time0_hours':'init_time',
 # - Get lat lon bounds 
 
 
-# In[9]:
+# In[19]:
 
 
 def test_plot():
@@ -137,7 +151,7 @@ def test_plot():
     ax1.set_title('Target Grid')
 
 
-# In[10]:
+# In[ ]:
 
 
 for model in all_models:
@@ -153,6 +167,15 @@ for model in all_models:
         print("Updating all files...")
     else:
         print("Only updating new files")
+        
+    # Remove any "empty" files (sometimes happends with ecmwf downloads)
+    all_files_new = []
+    for cf in all_files:
+        if os.stat(cf).st_size > 0:
+            all_files_new.append(cf)
+        else:
+            print("Found empty file: ",cf,". Consider deleting or redownloading.")
+    all_files = all_files_new # Replace
 
     weights_flag = False # Flag to set up weights have been created
 
@@ -167,9 +190,20 @@ for model in all_models:
                 continue # Skip, file already imported
 
         ds = xr.open_dataset(cf, engine='pynio')
+        
+        # Some grib files do not have a init_time dim, because its assumed for the month
+        if model in monthly_init_model:
+            if ('initial_time1_hours' not in ds.coords): # Check first
+                ds.coords['initial_time1_hours'] = datetime.datetime(int(cf.split('.')[0].split('_')[1]), 
+                                                              int(cf.split('.')[0].split('_')[2]), 1)
+                ds = ds.expand_dims('initial_time1_hours')
+        
+        # Test we have initial_time0_hours or initial_time1_hours
+        if ('initial_time0_hours' not in ds.coords) & ('initial_time1_hours' not in ds.coords):
+            print('initial_time... not found in file: ',cf,' Skipping it, need to FIX!!!!!!!!')
+            continue
 
         # Rename variables per esipn guidelines
-        print(ds)
         ds.rename(var_dic[model], inplace=True);
 
     #     ds.coords['nj'] = model_grid.nj
@@ -187,6 +221,15 @@ for model in all_models:
 
     #     # Apply model mask
     #     X = X.where(X.imask)
+    
+        # Check only data from one month (download bug)
+        cm = pd.to_datetime(ds.init_time.values).month
+        if model not in monthly_init_model:
+            if np.diff(cm).max() > 0:
+                fm = int(cf.split('.')[0].split('_')[2]) # Target month in file
+                print("Found dates outside month, removing...")
+                ds = ds.where(xr.DataArray(pd.to_datetime(ds.init_time.values).month==fm,
+                                       dims=ds.init_time.dims, coords=ds.init_time.coords), drop=True)
 
         # Calculate regridding matrix
         regridder = xe.Regridder(ds, obs_grid, method, periodic=True, reuse_weights=weights_flag)
@@ -210,5 +253,11 @@ for model in all_models:
     # Clean up
     if weights_flag:
         regridder.clean_weight_file()  # clean-up    
+
+
+# In[12]:
+
+
+
 
 

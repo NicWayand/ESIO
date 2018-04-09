@@ -2,3 +2,7 @@ notebooks/.ipynb_checkpoints*
 *.pyc
 .ipynb_checkpoints/
 notebooks/old
+scripts/download_scripts/pyconvert.sh
+scripts/download_scripts/strip_magic.py
+test_scripts/
+scripts/scheduler/

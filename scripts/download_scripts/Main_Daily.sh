@@ -15,6 +15,7 @@ fi
 
 # Model downloads
 python $REPO_DIR"/scripts/download_scripts/Download_s2s.py" "recent" &
+python $REPO_DIR"/scripts/download_scripts/Download_C3S.py" "recent" &
 
 wait # Below depends on above
 
@@ -36,5 +37,8 @@ python "./plot_forecast_availability.py" &
 # Models
 python "./plot_all_model_maps.py" &
 python "./plot_model_forecasts.py" &
+
+# Both
+python "./plot_Extent_Model_Obs.py" &
 
 echo Finished NRT script.

@@ -20,8 +20,6 @@ $REPO_DIR"/scripts/download_scripts/download_NSIDC_extents.sh" & # Fast
 
 # Model downloads
 python $REPO_DIR"/scripts/download_scripts/Download_YOPP_ECMWF.py" & # Slow (30 mins)
-python $REPO_DIR"/scripts/download_scripts/Download_c3s_ecmwf.py" & # Slow (2 hrs)
-python $REPO_DIR"/scripts/download_scripts/Download_c3s_ukmetoffice.py" & # Slow (2 hrs)
 
 wait # Below depends on above
 
