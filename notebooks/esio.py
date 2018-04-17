@@ -330,12 +330,13 @@ def expand_to_sipn_dims(ds):
 
 # Calc NSIDC median sea ice edge between 1981-2010
 def get_median_ice_edge(ds, ystart='1981', yend='2012', sic_threshold=0.15):
-    median_ice = ds.sel(time=slice(ystart, yend)).drop(['coast','land','missing'])
+    median_ice = ds.sel(time=slice(ystart, yend)) #.drop(['coast','land','missing'])
     # Calc "Extent" (1 or 0)
     median_ice['sic'] = (median_ice.sic >= sic_threshold).astype('int')
     DOY = [x.timetuple().tm_yday for x in pd.to_datetime(median_ice.time.values)]
     median_ice['time'] = DOY
     median_ice.reset_coords(['hole_mask'], inplace=True)
+    median_ice.load()
     median_ice = median_ice.groupby('time').median(dim='time')
     median_ice_fill = median_ice.where(median_ice.hole_mask==0, other=1).sic # Fill in pole hole with 1 (so contours don't get made around it)
     return median_ice_fill
@@ -415,12 +416,12 @@ def polar_axis():
     ax.set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45))
     return (f, ax)
 
-def multi_polar_axis(ncols=4, nrows=4, Nplots=None):
+def multi_polar_axis(ncols=4, nrows=4, Nplots=None, sizefcter=1):
     if not Nplots:
         Nplots = ncols*nrows
     # Create a grid of plots
     f, (axes) = plt.subplots(ncols=ncols, nrows=nrows, subplot_kw={'projection': ccrs.NorthPolarStereo(central_longitude=-45)})
-    f.set_size_inches(ncols*1.5, nrows*2)
+    f.set_size_inches(ncols*1.5*sizefcter, nrows*2*sizefcter)
     axes = axes.reshape(-1)
     for (i, ax) in enumerate(axes):  
         axes[i].coastlines(linewidth=0.2, color='black', resolution='50m')
@@ -462,7 +463,6 @@ def trim_common_times(ds_obs, ds_mod):
     # Subset Model
     ds_mod_out = ds_mod.where(((ds_mod.init_time >= T_start) & 
                               ((ds_mod.init_time+ds_mod.fore_time <= T_end).all(dim='fore_time'))), drop=True)
-
     assert (ds_mod_out.init_time+ds_mod_out.fore_time).max().values<=T_end, 'Model out contains valid times greater then end'
 
     return ds_obs_out, ds_mod_out
