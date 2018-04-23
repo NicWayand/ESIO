@@ -26,19 +26,20 @@ cd $REPO_DIR"/notebooks/" # Need to move here as some esiodata functions assume 
 source activate test_nio # Requires new env
 python "./Regrid_S2S_Models.py"
 
+wait
 source activate esio
-
 wait # Below depends on above
 
 # Make Plots
 # Availblity plots
-python "./plot_forecast_availability.py" &
+which python
+python "./plot_forecast_availability.py"
 
 # Models
-python "./plot_all_model_maps.py" &
-python "./plot_model_forecasts.py" &
+python "./plot_all_model_maps.py"
+#python "./plot_model_forecasts.py" &
 
 # Both
-python "./plot_Extent_Model_Obs.py" &
+python "./plot_Extent_Model_Obs.py"
 
 echo Finished NRT script.

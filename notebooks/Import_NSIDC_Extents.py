@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[5]:
+# In[1]:
 
 
 # Standard Imports
@@ -13,25 +13,22 @@ import pandas as pd
 import esiodata as ed
 
 
-# In[6]:
+# In[2]:
 
 
 E = ed.esiodata.load()
-# Directories
-model='yopp'
-runType='forecast'
-updateall = False
+
 file_in = os.path.join(E.obs['NSIDC_extent']['native'], 'N_seaice_extent_daily_v3.0.csv')
 file_out = os.path.join(E.obs['NSIDC_extent']['sipn_nc'], 'N_seaice_extent_daily_v3.0.nc')
 
 
-# In[7]:
+# In[3]:
 
 
 dateparse = lambda x: pd.datetime.strptime(x, '%Y     %m   %d')
 
 
-# In[8]:
+# In[4]:
 
 
 df = pd.read_csv(file_in,
@@ -42,14 +39,14 @@ df.columns = ['Extent','Missing','Source']
 ds = xr.Dataset.from_dataframe(df)
 
 
-# In[9]:
+# In[5]:
 
 
 ds.Extent.attrs['units'] = '10^6 sq km'
 ds.Extent.attrs['Missing'] = '10^6 sq km'
 
 
-# In[10]:
+# In[6]:
 
 
 ds.to_netcdf(file_out)

@@ -40,7 +40,6 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
 # Define models and variables to plot
-models = ['yopp','gfdlsipn']
 runType = 'forecast'
 variables = ['sic']
 
@@ -48,17 +47,17 @@ variables = ['sic']
 # In[3]:
 
 
-def plot_availability(cm):
-    f = plt.figure(figsize=(20,4))
-    plt.title(E.model[cm.model.item()]['model_label'])
-    plt.pcolormesh(cm.fore_time.values.astype('timedelta64[D]').astype('int'), cm.init_time,  cm.data, cmap=cmap )
-    cbar = plt.colorbar()
-    cbar.set_ticks([0.25, 0.75])
-    cbar.set_ticklabels(['Not Available', 'Available'])
-    plt.gcf().autofmt_xdate()
-    plt.xlabel('Forecast Lead (Days)')
-    plt.ylabel('Initialization Date')
-    return f
+# def plot_availability(cm):
+#     f = plt.figure(figsize=(20,4))
+#     plt.title(E.model[cm.model.item()]['model_label'])
+#     plt.pcolormesh(cm.fore_time.values.astype('timedelta64[D]').astype('int'), cm.init_time,  cm.data, cmap=cmap )
+#     cbar = plt.colorbar()
+#     cbar.set_ticks([0.25, 0.75])
+#     cbar.set_ticklabels(['Not Available', 'Available'])
+#     plt.gcf().autofmt_xdate()
+#     plt.xlabel('Forecast Lead (Days)')
+#     plt.ylabel('Initialization Date')
+#     return f
 
 
 # In[4]:
@@ -69,55 +68,125 @@ def plot_availability(cm):
 #############################################################
 E = ed.esiodata.load()
 
+cmap_c = itertools.cycle(sns.color_palette("Set2", len(E.model.keys()) ))
+markercycler = itertools.cycle(["*","o","s","v","x"])
+linecycler = itertools.cycle(["-","--","-.",":","--"])
+
+
+# In[5]:
+
+
+cvar = 'sic'
+yticks1 = []
+yticklabels1 = []
+# Plot simple time line of init_times
+f = plt.figure(figsize=(15,5))
+fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
+for (i_cm, c_model) in enumerate(E.model.keys()):
+# for (i_cm, c_model) in enumerate(['ukmo','gfdlsipn']):
+    print("Plotting model ", c_model)
+    # Load in Model
+    model_forecast = os.path.join(E.model[c_model][runType]['sipn_nc'], '*.nc')
+    # Check we have files 
+    files = glob.glob(model_forecast)
+    if not files:
+        print("Skipping model", c_model, "no forecast files found.")
+        continue # Skip this model
+    ds_model = xr.open_mfdataset(model_forecast)
+    ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
+
+    # Set attributes
+#         ds_model.attrs['model_label'] = E.model[c_model]['model_label']
+
+    # Select var of interest
+    ds_model = ds_model[cvar]
+
+    # Plot
+    cc = next(cmap_c)     
+    cmarker = next(markercycler)
+
+    x = ds_model.init_time.values
+    y = [i_cm for i in np.arange(0,x.size)]
+    plt.scatter(x, y, s=50, 
+                    facecolors=cc, edgecolors=cc, 
+                    marker=cmarker, label=E.model[c_model]['model_label'])
+    yticks1.append(i_cm)
+    yticklabels1.append(E.model[c_model]['model_label'])
+
+plt.gcf().autofmt_xdate()
+plt.xlabel('Initialization Date')
+plt.gca().set_yticks(yticks1)
+plt.gca().set_yticklabels(yticklabels1)
+f.savefig(os.path.join(fig_dir,'Init_avail.png'),bbox_inches='tight',dpi=200)
+plt.title('Availbility of Initialization Dates')
+
+
+# In[6]:
+
+
+# Recent init_time VS. fore_time plot
+c_xlim = [datetime.datetime.now() - datetime.timedelta(days=30), 
+          datetime.datetime.now() + datetime.timedelta(days=30*6)]
+c_ylim = [datetime.datetime.now() - datetime.timedelta(days=60), 
+          datetime.datetime.now() - datetime.timedelta(days=1)]
 for cvar in variables:
 
-    ds_mm_l = []
-    for c_model in models:
-
+    fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
+    if not os.path.exists(fig_dir):
+        os.makedirs(fig_dir)
+    
+    f = plt.figure(figsize=(15,5))
+    for c_model in E.model.keys():
+#     for c_model in ['yopp','gfdlsipn']:
+        print("Plotting model ", c_model)
         # Load in Model
         model_forecast = os.path.join(E.model[c_model][runType]['sipn_nc'], '*.nc')
+        # Check we have files 
+        files = glob.glob(model_forecast)
+        if not files:
+            print("Skipping model", c_model, "no forecast files found.")
+            continue # Skip this model
         ds_model = xr.open_mfdataset(model_forecast)
         ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
         # Set attributes
         ds_model.attrs['model_label'] = E.model[c_model]['model_label']
-        ds_model.attrs['model_grid_file'] = E.model[c_model]['grid']
-        ds_model.attrs['stero_grid_file'] = E.obs['NSIDC_0051']['grid']
 
         # Select var of interest
         ds_model = ds_model[cvar]
 
-        # Average over ensembles (if available)
-        ds_model = ds_model.mean(dim='ensemble')
+        # Check if any data for each init/fore time
+        #ds_model = ds_model.notnull().any(dim='x').any(dim='y').astype('int')
+        ds_model['valid_time'] = ds_model.init_time + ds_model.fore_time
 
-        # Set new dim model
-        ds_model.coords['model'] = c_model
-        ds_mm_l.append(ds_model)
+        # Plot
+        cc = next(cmap_c)     
+        cmarker = next(markercycler)
+        clinen = next(linecycler)
+        haslabel = False
+        for it in ds_model.init_time:
+            if haslabel:
+                clabel = '_nolegend_'
+            else:
+                clabel = E.model[c_model]['model_label']
+                
+            x = ds_model.sel(init_time=it).valid_time.values
+            y = [ds_model.sel(init_time=it).init_time.values for k in np.arange(0,x.size)]
+            plt.plot([x[0],x[-1]], [y[0],y[-1]], color=cc, label=clabel, linestyle=clinen)
+#             plt.scatter(x, y, s=50, 
+#                         facecolors=cc, edgecolors=cc, 
+#                         label=clabel, marker=cmarker)
+            haslabel = True
 
-    # Concat
-    ds_mm = xr.concat(ds_mm_l, dim='model')
-
-    #############################################################
-
-    # ds_mm.fore_time.values.astype('timedelta64[D]')
-
-    fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
-    if not os.path.exists(fig_dir):
-        os.makedirs(fig_dir)
-
-    # Check if any data for each init/fore time
-    da_A = ds_mm.notnull().any(dim='x').any(dim='y').astype('int')
-
-    flatui = ['k', 'g']
-    cmap = matplotlib.colors.ListedColormap(sns.color_palette(flatui))
-
-    # Plot
-    for c_model in models:
-        X = da_A.sel(model=c_model)
-        f = plot_availability(X)
-        f.savefig(os.path.join(fig_dir,'DataAvailable_'+cvar+'_'+c_model+'.png'),bbox_inches='tight',dpi=200)
-        
-    # Mem clean up
-    ds_mm = None
+    plt.xlim(c_xlim)
+    plt.ylim(c_ylim)
+    plt.gcf().autofmt_xdate()
+    plt.xlabel('Valid Date')
+    plt.ylabel('Initialization Date')
+    #plt.axis('tight')
+    plt.legend(ncol=int(len(E.model.keys())/4), bbox_to_anchor=(1, -0.5))
+    # End of all models
+    f.savefig(os.path.join(fig_dir,'DataAvailable_'+cvar+'.png'),bbox_inches='tight',dpi=200)
+#     mpld3.save_html(f, os.path.join(fig_dir,'DataAvailable_'+cvar+'.html'))
 
 

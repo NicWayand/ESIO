@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 # # YOPP Forecast
@@ -11,7 +11,7 @@
 # - Saves to netcdf files grouped by year
 
 
-# In[1]:
+# In[2]:
 
 
 # Standard Imports
@@ -31,14 +31,14 @@ import os
 import glob
 import seaborn as sns
 import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # ESIO Imports
 import esio
 import esiodata as ed
-# import read_SeaIceConcentration_PIOMAS as piomas
 
 
-# In[2]:
+# In[3]:
 
 
 # General plotting settings
@@ -46,21 +46,21 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[3]:
+# In[4]:
 
 
 E = ed.esiodata.load()
 # Directories
 model='yopp'
 runType='forecast'
-updateall = False
+updateall = True
 data_dir = E.model[model][runType]['native']
 data_out = E.model[model][runType]['sipn_nc']
 model_grid_file = E.model[model]['grid']
 stero_grid_file = E.obs['NSIDC_0051']['grid']
 
 
-# In[4]:
+# In[5]:
 
 
 obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
@@ -69,14 +69,14 @@ obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[5]:
+# In[6]:
 
 
 # Regridding Options
 method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[6]:
+# In[7]:
 
 
 ## TODO
@@ -84,7 +84,7 @@ method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', '
 # - Get lat lon bounds 
 
 
-# In[7]:
+# In[8]:
 
 
 all_files = glob.glob(os.path.join(data_dir, 'yopp*ci*.grib'))
@@ -95,12 +95,18 @@ else:
     print("Only updating new files")
 
 
-# In[10]:
+# In[9]:
 
 
 weights_flag = False # Flag to set up weights have been created
 
 cvar = 'sic'
+
+# Load land/sea mask file
+if model_grid_file!='MISSING':
+    ds_mask = xr.open_dataset(model_grid_file)
+else:
+    ds_mask = None
 
 for cf in all_files:
     # Check if already imported and skip (unless updateall flag is True)
@@ -116,6 +122,14 @@ for cf in all_files:
     ds.rename({'CI_GDS4_SFC':'sic', 'g4_lat_2':'lat', 'g4_lon_3':'lon', 'initial_time0_hours':'init_time',
               'forecast_time1':'fore_time'}, inplace=True);
     
+    # Apply masks (if available)
+    if ds_mask:
+        # land_mask is the fraction of native grid cell that is land
+        # (1-land_mask) is fraction ocean
+        # Multiply sic by fraction ocean to get actual native grid cell sic
+        # Also mask land out where land_mask==1
+        ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
+
 #     ds.coords['nj'] = model_grid.nj
 #     ds.coords['ni'] = model_grid.ni
 #     ds.coords['lat'] = model_grid.lat
@@ -152,7 +166,7 @@ for cf in all_files:
     print('Saved ', f_out)
 
 
-# In[ ]:
+# In[10]:
 
 
 # Clean up
@@ -162,7 +176,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[1]:
+# In[11]:
 
 
 # sic_all = xr.open_dataset(f_out)

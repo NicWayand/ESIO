@@ -4,7 +4,7 @@
 # In[1]:
 
 
-# S2S Model Regrid
+# S2S and C3S Model Regrid
 
 # - Loads in all daily forecasts of sea ice extent
 # - Regrids to polar stereographic,
@@ -32,6 +32,7 @@ import os
 import glob
 import seaborn as sns
 import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # ESIO Imports
 import esio
@@ -51,11 +52,13 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 E = ed.esiodata.load()
 # Directories
-all_models = ['ukmetofficesipn', 'ecmwfsipn', 'bom', 'ncep', 'ukmo', 'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
-         'jma', 'metreofr']
+all_models = [ 'ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
+              'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
+              'jma', 'metreofr'] # 
+# all_models = ['ecmwfsipn']
 runType='forecast'
 updateall = False
-
+cvar = 'sic'
 stero_grid_file = E.obs['NSIDC_0051']['grid']
 
 
@@ -75,7 +78,7 @@ obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[17]:
+# In[7]:
 
 
 # Store dictionary to convert each model variable names to sipn syntax
@@ -109,7 +112,7 @@ var_dic['ecmwfsipn'] = {'initial_time1_hours':'init_time',
 monthly_init_model = ['ecmwfsipn']
 
 
-# In[18]:
+# In[8]:
 
 
 ## TODO
@@ -117,7 +120,7 @@ monthly_init_model = ['ecmwfsipn']
 # - Get lat lon bounds 
 
 
-# In[19]:
+# In[9]:
 
 
 def test_plot():
@@ -128,7 +131,7 @@ def test_plot():
     # Plot original projection
     plt.figure(figsize=(20,10))
     ax1 = plt.axes(projection=ccrs.PlateCarree())
-    ds_p = ds.sic.isel(init_time=0).isel(fore_time=0)
+    ds_p = ds.sic.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
     ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
                                      vmin=0, vmax=1,
                                      cmap=matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10)),
@@ -151,7 +154,7 @@ def test_plot():
     ax1.set_title('Target Grid')
 
 
-# In[ ]:
+# In[10]:
 
 
 for model in all_models:
@@ -175,17 +178,25 @@ for model in all_models:
             all_files_new.append(cf)
         else:
             print("Found empty file: ",cf,". Consider deleting or redownloading.")
-    all_files = all_files_new # Replace
+    all_files = sorted(all_files_new) # Replace and sort
 
     weights_flag = False # Flag to set up weights have been created
 
-    cvar = 'sic'
 
+    
+    # Load land/sea mask file
+    if model_grid_file.split('/')[-1]!='MISSING':
+        ds_mask = xr.open_dataset(model_grid_file)
+    else:
+        ds_mask = None
+
+    # For each file
     for cf in all_files:
         # Check if already imported and skip (unless updateall flag is True)
+        # Always import the most recent two months of files (because they get updated)
         f_out = os.path.join(data_out, os.path.basename(cf).split('.')[0]+'_Stereo.nc') # netcdf file out 
         if not updateall:
-            if os.path.isfile(f_out):
+            if (os.path.isfile(f_out)) & (cf not in all_files[-2:]):
                 print("Skipping ", os.path.basename(cf), " already imported.")
                 continue # Skip, file already imported
 
@@ -194,6 +205,7 @@ for model in all_models:
         # Some grib files do not have a init_time dim, because its assumed for the month
         if model in monthly_init_model:
             if ('initial_time1_hours' not in ds.coords): # Check first
+                print('Adding init_time as decoder failed to get it.....')
                 ds.coords['initial_time1_hours'] = datetime.datetime(int(cf.split('.')[0].split('_')[1]), 
                                                               int(cf.split('.')[0].split('_')[2]), 1)
                 ds = ds.expand_dims('initial_time1_hours')
@@ -206,13 +218,14 @@ for model in all_models:
         # Rename variables per esipn guidelines
         ds.rename(var_dic[model], inplace=True);
 
-    #     ds.coords['nj'] = model_grid.nj
-    #     ds.coords['ni'] = model_grid.ni
-    #     ds.coords['lat'] = model_grid.lat
-    #     ds.coords['lon'] = model_grid.lon
-    #     ds.coords['lat_b'] = model_grid.lat_b
-    #     ds.coords['lon_b'] = model_grid.lon_b
-    #     ds.coords['imask'] = model_grid.imask
+        # Apply masks (if available)
+        if ds_mask:
+            # land_mask is the fraction of native grid cell that is land
+            # (1-land_mask) is fraction ocean
+            # Multiply sic by fraction ocean to get actual native grid cell sic
+            # Also mask land out where land_mask==1
+            ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
+
 
     #     # Set sic below 0 to 0
     #     if X.sic.min().values < 0:
@@ -244,18 +257,25 @@ for model in all_models:
         # Expand dims
         var_out = esio.expand_to_sipn_dims(var_out)
         
-        #test_plot()
+#         test_plot()
 
         # # Save regridded to netcdf file
         var_out.to_netcdf(f_out)
         var_out = None # Memory clean up
+        ds = None
         print('Saved ', f_out)
+        
+        
+    # End of all files for current model
+    # Clean up data from this model
+    ds_mask = None
+
     # Clean up
     if weights_flag:
         regridder.clean_weight_file()  # clean-up    
 
 
-# In[12]:
+# In[ ]:
 
 
 

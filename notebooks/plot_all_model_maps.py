@@ -69,7 +69,7 @@ variables = ['sic'] #, 'hi']
 # Initialization times to plot
 cd = datetime.datetime.now()
 cd = datetime.datetime(cd.year, cd.month, cd.day) # Set hour min sec to 0. 
-init_slice = np.arange(cd - datetime.timedelta(days=35), cd, datetime.timedelta(days=1))
+init_slice = np.arange(cd - datetime.timedelta(days=30), cd, datetime.timedelta(days=1))
 
 
 # In[5]:
@@ -92,18 +92,32 @@ da_slices = xr.DataArray(slices, dims=('fore_time'))
 E = ed.esiodata.load()
 
 # Get median ice edge
-ds_51 = xr.open_dataset(E.obs['NSIDC_0051']['sipn_nc']+'/NSIDC_0051.nc')
-median_ice_fill = esio.get_median_ice_edge(ds_51)
-ds_51 = None
+
+# ds_51 = xr.open_mfdataset(E.obs['NSIDC_0051']['sipn_nc']+'/*.nc',concat_dim='time', 
+#                                    autoclose=True, 
+#                                    compat='no_conflicts',
+#                                    data_vars=['sic'])
+# median_ice_fill = esio.get_median_ice_edge(ds_51)
+# ds_51 = None
+median_ice_fill = xr.open_mfdataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'ice_edge.nc')).sic
 
 
 # In[7]:
 
 
-ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/NSIDC_0081.nc')
+median_ice_fill
 
 
 # In[8]:
+
+
+import timeit
+start_time = timeit.default_timer()
+ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='time', autoclose=True)#,
+print(timeit.default_timer() - start_time)
+
+
+# In[9]:
 
 
 # print(ds_51.time.min().values, ds_51.time.max().values)
@@ -111,7 +125,7 @@ ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/NSIDC_0081.nc')
 # print(ds_79.time.min().values, ds_79.time.max().values)
 
 
-# In[9]:
+# In[10]:
 
 
 # Define models to plot
@@ -167,14 +181,15 @@ for cvar in variables:
                 axes[i].set_title(E.model[cmod]['model_label'])
                 
                 # Load in Model
-                model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc'], '*.nc')
+                model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc'], '*.nc') 
                 
                 # Check we have files 
                 files = glob.glob(model_forecast)
                 if not files:
                     #print("Skipping model", cmod, "no forecast files found.")
                     continue # Skip this model
-                ds_model = xr.open_mfdataset(model_forecast)
+                ds_model = xr.open_mfdataset(model_forecast, 
+                                     chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448})
                 ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
                 # Set attributes

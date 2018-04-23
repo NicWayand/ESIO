@@ -52,21 +52,35 @@ def read_NSIDC_binary(cfile, x, y, product=None):
     ds = ds.where(ds<=1).to_dataset()
     # Add date
     ds.coords['time'] = parse_NSIDC_date(os.path.basename(cfile))
+    ds.expand_dims('time')
     #if get_masks:
     # Add other masks
     ds.coords['hole_mask'] = da_all==hole_mask
-    ds.coords['coast'] = da_all==coast
-    ds.coords['land'] = da_all==land
-    ds.coords['missing'] = da_all==missing
+    #ds.coords['coast'] = da_all==coast # Commented out because makes filse too slow to load, and not used.
+    #ds.coords['land'] = da_all==land
+    #ds.coords['missing'] = da_all==missing
     
     return ds
 
+
+# Loads in one file
+def load_1_NSIDC(filein=None, product=None):
+    # Define coords
+    # Indices values
+    x = np.arange(0,304,1)
+    y = np.arange(0,448,1)
+    
+    ds_sic = read_NSIDC_binary(filein, x, y, product)
+    
+    return ds_sic
+
+# Loads in multiple files
 def load_NSIDC(all_files=None, product=None):
     # Define coords
 
     # Indices values
-    x = np.arange(0,304,1)
-    y = np.arange(0,448,1)
+    x = np.arange(0, 304, 1)
+    y = np.arange(0, 448, 1)
     # Loop through each binary file and read into a Dataarray
     da_l = []
     for cf in all_files:

@@ -266,22 +266,35 @@ def split_by_lat(ds, latVal=65.0, want=None):
          raise ValueError('Value for want not found. Use above or below.')
     return ds_out
 
+def calc_extent(da, region, extent_thress=0.15, fill_pole_hole=False):
+    ''' Returns extent in millions of km^2 within all ocean regions (NO LAKES!)'''
+    
+    # TODO: Need to assert we pass in a DataArray of sic
+    
+    extent = (( da.where(region.mask.isin(region.ocean_regions)) >= extent_thress ).astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
+    # Add in pole hole (optional)
+    if fill_pole_hole:
+        extent = extent + (da.hole_mask.astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
+    return extent
+
 
 def agg_by_domain(da_grid=None, ds_region=None):
     # TODO: add check for equal dims
     ds_list = []
-    for cd in ds_region.nregions:
+    for cd in ds_region.nregions.values:
         # Get name
-        region_name = ds_region.region_names.sel(nregions=cd).item(0).decode("utf-8") 
+        region_name = ds_region.region_names.sel(nregions=cd).values
         # Check we want it (exclude some regions)
-        if not region_name in ['Ice-free Oceans  ', 'null             ',
-                               'land outline     ', 'land             ' ]:
+        if not region_name in ['Ice-free Oceans', 'null','land outline', 'land' ]:
             # Make mask
             cmask = ds_region.mask==cd 
             # Multiple by cell area to get area of sea ice
-            da_avg = da_grid.where(cmask) * ds_region.area.where(cmask)
+            da_avg = (da_grid.where(cmask==1)>=0.15).astype('int') * ds_region.area.where(cmask==1)
             # Sum up over current domain and convert to millions of km^2
+            #print((cmask * ds_region.area.where(cmask==1)).sum(dim='x').sum(dim='y') / (10**6))
             da_avg = da_avg.sum(dim='x').sum(dim='y') / (10**6)
+            # TODO: Add optoin to add in pole hole if obs and central arctic
+            #print(da_avg.values)
             # Add domain name
             da_avg['nregions'] = cd
             da_avg['region_names'] = region_name
@@ -394,16 +407,25 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
                     init_label = '_nolegend_'
 
                 if color=='cycle_init':
-                    ccolor = next(cmap_c)        
+                    ccolor = next(cmap_c)
+                    
+                x = (cds.fore_time + cds.init_time.sel(init_time=it)).values
+                y = cds.sel(init_time=it).values
+                
+                # Check we have data (issue with some models that change number of ensembles, when xarray merges, missing data is filled in (i.e. ukmo)
+                # So check y is greater than 0 before plotting)
+                if np.sum(y)==0:
+                    continue
                 
                 # (optional) plot dot at initialization time
                 if init_dot:
-                    axin.plot((cds.fore_time + cds.init_time.sel(init_time=it))[0], cds.sel(init_time=it)[0], marker='*', linestyle='None', color='red', label=init_label)
+                    axin.plot(x[0], y[0], marker='*', linestyle='None', color='red', label=init_label)
                 
                 # Plot line
-                axin.plot(cds.fore_time + cds.init_time.sel(init_time=it), cds.sel(init_time=it), label=labelin, color=ccolor, marker=marker, linestyle=linestyle)
+                axin.plot(x, y, label=labelin, color=ccolor, marker=marker, linestyle=linestyle)
                 
                 labeled = True
+            cds = None
             
 def polar_axis():
     '''cartopy geoaxes centered at north pole'''

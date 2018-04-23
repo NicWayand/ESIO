@@ -28,7 +28,7 @@ cd $REPO_DIR"/notebooks/" # Need to move here as some esiodata functions assume 
 
 # Import Observations to sipn format
 which python
-python "./SeaIceObs_native_2_netcdf.py"
+python "./Import_NSIDC_Obs.py"
 python "./Import_NSIDC_Extents.py"
 
 # Import Models to sipn format
@@ -48,6 +48,6 @@ python "./plot_observations.py" &
 
 # Models
 python "./plot_all_model_maps.py" &
-python "./plot_model_forecasts.py" &
+#python "./plot_model_forecasts.py" &
 
 echo Finished NRT script.
