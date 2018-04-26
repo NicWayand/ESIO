@@ -270,8 +270,8 @@ def calc_extent(da, region, extent_thress=0.15, fill_pole_hole=False):
     ''' Returns extent in millions of km^2 within all ocean regions (NO LAKES!)'''
     
     # TODO: Need to assert we pass in a DataArray of sic
-    
     extent = (( da.where(region.mask.isin(region.ocean_regions)) >= extent_thress ).astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
+    
     # Add in pole hole (optional)
     if fill_pole_hole:
         extent = extent + (da.hole_mask.astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
@@ -459,6 +459,9 @@ def multi_polar_axis(ncols=4, nrows=4, Nplots=None, sizefcter=1):
 # Evaluation functions
 ############################################################################
 
+def nanSum(da=None, dim=None):
+    return da.sum(dim=dim).where(da.notnull().sum(dim=dim) > 0 )
+
 def format_obs_like_model(ds_mod, ds_obs):
     ''' Reformats observational dataset to be structured like a model forecast dataset 
     Format obs like model (i.e. ensemble x init_time x forecast_time) '''
@@ -470,24 +473,41 @@ def format_obs_like_model(ds_mod, ds_obs):
     
     return ds_obs_X
 
-def trim_common_times(ds_obs, ds_mod):
+def trim_common_times(ds_obs=None, ds_mod=None, freq=None):
     ''' Trim an observed and modeled dataset to common start and end dates (does not
     insure internal times are the same) '''
     
     # Get earliest and latest times
     T_start = np.max([ds_obs.time.values[0], ds_mod.init_time.min().values])
     T_end = np.min([ds_obs.time.values[-1], (ds_mod.init_time.max() + ds_mod.fore_time.max()).values])
-    print(T_start, T_end)
-    assert T_start < T_end, 'Start must be before End!'
+
 
     # Subset Obs
     ds_obs_out = ds_obs.where((ds_obs.time >= T_start) & (ds_obs.time <= T_end), drop=True)
     # Subset Model
-    ds_mod_out = ds_mod.where(((ds_mod.init_time >= T_start) & 
-                              ((ds_mod.init_time+ds_mod.fore_time <= T_end).all(dim='fore_time'))), drop=True)
-    assert (ds_mod_out.init_time+ds_mod_out.fore_time).max().values<=T_end, 'Model out contains valid times greater then end'
+    #ds_mod_out = ds_mod.where(((ds_mod.init_time >= T_start) & 
+    #                          ((ds_mod.init_time+ds_mod.fore_time <= T_end).all(dim='fore_time'))), drop=True) # If forecasts times are long, this drops too much data
+    
+    # For model, we want to drop any valid times before T_start
+    ds_mod = ds_mod.where(ds_mod.init_time >= T_start, drop=True)
+    
+    # AND set to NaN any valid times after T_end (updated)
+    valid_time = ds_mod.init_time + ds_mod.fore_time
+    ds_mod_out = ds_mod.where( (ds_mod.init_time >= T_start) & 
+                          (valid_time <= T_end))
+                              
+    # Expand obs time to have missing until model valid forecasts
+    new_time = pd.date_range(ds_obs_out.time.max().values, valid_time.max().values, freq=freq) # new time we don't have obs yet (future)
+    new_obs_time = xr.DataArray(np.ones(new_time.shape)*np.NaN,  dims='time', coords={'time':new_time}) # new dataArray of missing
+    ds_obs_out_exp = ds_obs_out.combine_first(new_obs_time) # Merge                         
+    T_end = ds_obs_out_exp.time.max().values # new end time
+    
+    assert (ds_mod_out.init_time+ds_mod_out.fore_time).max().values <= ds_obs_out_exp.time.max().values, 'Model out contains valid times greater then end'
 
-    return ds_obs_out, ds_mod_out
+    print(T_start, T_end)
+    assert T_start < T_end, 'Start must be before End!'
+    
+    return ds_obs_out_exp, ds_mod_out
 
 def clim_mu_sigma(ds_obs, method='MK'):
     ''' Calculate the climatological mean and standard deviation following:

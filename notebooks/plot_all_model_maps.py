@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -37,7 +37,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 def remove_small_contours(p, thres=10):
@@ -55,7 +55,7 @@ def remove_small_contours(p, thres=10):
                 del(level.get_paths()[kp])  # no remove() for Path objects:(
 
 
-# In[3]:
+# In[ ]:
 
 
 # Plotting Info
@@ -63,7 +63,7 @@ runType = 'forecast'
 variables = ['sic'] #, 'hi']
 
 
-# In[4]:
+# In[ ]:
 
 
 # Initialization times to plot
@@ -72,7 +72,7 @@ cd = datetime.datetime(cd.year, cd.month, cd.day) # Set hour min sec to 0.
 init_slice = np.arange(cd - datetime.timedelta(days=30), cd, datetime.timedelta(days=1))
 
 
-# In[5]:
+# In[ ]:
 
 
 # Forecast times to plot
@@ -83,7 +83,7 @@ slices = weeks.union(months).union(years).round('1d')
 da_slices = xr.DataArray(slices, dims=('fore_time'))
 
 
-# In[6]:
+# In[ ]:
 
 
 #############################################################
@@ -102,13 +102,13 @@ E = ed.esiodata.load()
 median_ice_fill = xr.open_mfdataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'ice_edge.nc')).sic
 
 
-# In[7]:
+# In[ ]:
 
 
 median_ice_fill
 
 
-# In[8]:
+# In[ ]:
 
 
 import timeit
@@ -117,7 +117,7 @@ ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='ti
 print(timeit.default_timer() - start_time)
 
 
-# In[9]:
+# In[ ]:
 
 
 # print(ds_51.time.min().values, ds_51.time.max().values)
@@ -125,7 +125,7 @@ print(timeit.default_timer() - start_time)
 # print(ds_79.time.min().values, ds_79.time.max().values)
 
 
-# In[10]:
+# In[ ]:
 
 
 # Define models to plot

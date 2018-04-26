@@ -8,5 +8,5 @@ pyconvert.sh plot_Extent_Model_Obs.ipynb
 pyconvert.sh plot_all_model_maps.ipynb
 pyconvert.sh plot_forecast_availability.ipynb
 pyconvert.sh plot_observations.ipynb
-
+pyconvert.sh Calc_adjusted_extents.ipynb
 

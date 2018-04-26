@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 # S2S and C3S Model Regrid
@@ -11,7 +11,7 @@
 # - Saves to netcdf files grouped by year
 
 
-# In[2]:
+# In[ ]:
 
 
 # Standard Imports
@@ -39,7 +39,7 @@ import esio
 import esiodata as ed
 
 
-# In[3]:
+# In[ ]:
 
 
 # General plotting settings
@@ -47,22 +47,22 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[4]:
+# In[ ]:
 
 
 E = ed.esiodata.load()
 # Directories
-all_models = [ 'ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
-              'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
-              'jma', 'metreofr'] # 
-# all_models = ['ecmwfsipn']
+# all_models = [ 'ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
+#               'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
+#               'jma', 'metreofr'] 
+all_models = ['ukmetofficesipn']
 runType='forecast'
 updateall = False
 cvar = 'sic'
 stero_grid_file = E.obs['NSIDC_0051']['grid']
 
 
-# In[5]:
+# In[ ]:
 
 
 obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
@@ -71,14 +71,14 @@ obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[6]:
+# In[ ]:
 
 
 # Regridding Options
 method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[7]:
+# In[ ]:
 
 
 # Store dictionary to convert each model variable names to sipn syntax
@@ -112,15 +112,14 @@ var_dic['ecmwfsipn'] = {'initial_time1_hours':'init_time',
 monthly_init_model = ['ecmwfsipn']
 
 
-# In[8]:
+# In[ ]:
 
 
 ## TODO
-# - Get mask
 # - Get lat lon bounds 
 
 
-# In[9]:
+# In[ ]:
 
 
 def test_plot():
@@ -154,7 +153,7 @@ def test_plot():
     ax1.set_title('Target Grid')
 
 
-# In[10]:
+# In[ ]:
 
 
 for model in all_models:

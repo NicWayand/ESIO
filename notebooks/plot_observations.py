@@ -167,12 +167,13 @@ f.savefig(os.path.join(fig_dir,'Regional_Map.png'),bbox_inches='tight',dpi=200)
 # In[11]:
 
 
-## Plot Extents
-
 # Plot regional sea ice extents (last 90 days)
 f = plt.figure(figsize=(10,5))
 ax1 = plt.subplot(1, 1, 1)
 for cd in da_81reg.nregions:
+    # Don't plot central arctic (boring)
+    if da_81reg.region_names.sel(nregions=cd) == 'Central Arctic':
+        continue
     da_81reg.where(da_81reg.time >= last_sept, 
                    drop=True).sel(nregions=cd).plot(label=da_81reg.region_names.sel(nregions=cd).values,
                                                    color=next(cmap_reg_cycle),
@@ -184,15 +185,24 @@ f_name = os.path.join(fig_dir,'panArcticSIC_Forecast_Regional_CurrentSeason')
 f.savefig(f_name+'.png',bbox_inches='tight',dpi=200)
 mpld3.save_json(f, f_name+'.json')
 
+
+# In[12]:
+
+
+## Plot Extents
+
+
+
 # Plot pan-Arctic sea ice extent
 f = plt.figure(figsize=(10,5))
 ax1 = plt.subplot(1, 1, 1) # Observations
-da_81_30_avg.plot(ax=ax1, label='NSIDC Near-Real-Time\n (Maslanik et al. 1999)')
-ds_ext.sel(datetime=da_81_30_avg.time).Extent.plot(label='NSIDC Offical Extent', color='m')
+da_81_30_avg.plot(ax=ax1, label='NSIDC NRT\n (Maslanik et al. 1999)')
+ds_ext.sel(datetime=da_81_30_avg.time).Extent.plot(label='NSIDC V3', color='m')
 ax1.set_ylabel('Millions of square km')
 plt.legend(loc='lower right') #bbox_to_anchor=(1.03, 1.05))
 # Save to png and json (for website)
 f_name = os.path.join(fig_dir,'panArcticSIC_Forecast_30days')
+plt.title('Last 30 days')
 f.savefig(f_name+'.png',bbox_inches='tight',dpi=200)
 mpld3.save_json(f, f_name+'.json')
 mpld3.save_html(f, f_name+'.html')
@@ -201,16 +211,15 @@ mpld3.save_html(f, f_name+'.html')
 ## Plot pan-Arctic sea ice extent
 f = plt.figure(figsize=(10,5))
 ax1 = plt.subplot(1, 1, 1) # Observations
-da_81_3m_avg.plot(ax=ax1, label='NSIDC Near-Real-Time\n (Maslanik et al. 1999)')
-ds_ext.sel(datetime=da_81_3m_avg.time).Extent.plot(label='NSIDC Offical Extent', color='m')
+da_81_3m_avg.plot(ax=ax1, label='NSIDC NRT\n (Maslanik et al. 1999)')
+ds_ext.sel(datetime=da_81_3m_avg.time).Extent.plot(label='NSIDC V3', color='m')
+plt.title('Last 3 months')
 ax1.set_ylabel('Millions of square km')
 plt.legend(loc='lower right')
 f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_3months.png'),bbox_inches='tight',dpi=200)
 
 
-
 # Plot Recent maps
-
 
 # Set up plotting info
 cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues_r", 10))
@@ -228,7 +237,7 @@ obs1.plot.pcolormesh(ax=ax1, x='lon', y='lat',
                                      transform=ccrs.PlateCarree(),
                                      cmap=cmap_sic,
                       vmin=0, vmax=1, cbar_kwargs={'label':'Sea Ice Concentration (-)'})
-ax1.set_title('NSIDC 0081\n'+pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
+ax1.set_title('NSIDC NRT\n'+pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
 plt.tight_layout()
 f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map.png'),bbox_inches='tight',dpi=200)
 
@@ -238,16 +247,16 @@ f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map.png'),bbox_inches='tig
 (f, ax1) = esio.polar_axis()
 f.set_size_inches(10, 5)
 obs1 = da_81.sel(time=ctime, method='nearest')
-ctime_m1 = obs1.time.values - np.timedelta64(1, 'D')
+ctime_m1 = obs1.time.values - np.timedelta64(14, 'D')
 obs2 = da_81.sel(time=ctime_m1, method='nearest')
 (obs1-obs2).plot.pcolormesh(ax=ax1, x='lon', y='lat', 
                                      transform=ccrs.PlateCarree(),
                                      cmap=cmap_dif,
                       vmin=-1, vmax=1, cbar_kwargs={'label':'Sea Ice Concentration (-)'})
-ax1.set_title('NSIDC 0081\n'+pd.to_datetime(obs2.time.values).strftime('%Y-%m-%d')+' to '+ 
+ax1.set_title('2 Week Change\nNSIDC NRT\n'+pd.to_datetime(obs2.time.values).strftime('%Y-%m-%d')+' to '+ 
              pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
 plt.tight_layout()
-f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map_1Day_Change.png'),bbox_inches='tight',dpi=200)
+f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map_2Week_Change.png'),bbox_inches='tight',dpi=200)
 
 
 
@@ -261,7 +270,7 @@ obs2 = da_81.sel(time=ctime_m1, method='nearest')
                                      transform=ccrs.PlateCarree(),
                                      cmap=cmap_dif,
                       vmin=-1, vmax=1, cbar_kwargs={'label':'Sea Ice Concentration (-)'})
-ax1.set_title('NSIDC 0081\n'+pd.to_datetime(obs2.time.values).strftime('%Y-%m-%d')+' to '+ 
+ax1.set_title('1 Week Change\nNSIDC NRT\n'+pd.to_datetime(obs2.time.values).strftime('%Y-%m-%d')+' to '+ 
              pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
 plt.tight_layout()
 f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map_1Week_Change.png'),bbox_inches='tight',dpi=200)

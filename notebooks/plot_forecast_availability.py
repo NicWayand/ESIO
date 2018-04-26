@@ -63,6 +63,13 @@ variables = ['sic']
 # In[4]:
 
 
+ctime = np.datetime64(datetime.datetime.now())
+lag_time_30days = ctime - np.timedelta64(30, 'D')
+
+
+# In[5]:
+
+
 #############################################################
 # Load in Data
 #############################################################
@@ -73,7 +80,7 @@ markercycler = itertools.cycle(["*","o","s","v","x"])
 linecycler = itertools.cycle(["-","--","-.",":","--"])
 
 
-# In[5]:
+# In[6]:
 
 
 cvar = 'sic'
@@ -121,7 +128,56 @@ f.savefig(os.path.join(fig_dir,'Init_avail.png'),bbox_inches='tight',dpi=200)
 plt.title('Availbility of Initialization Dates')
 
 
-# In[6]:
+# In[7]:
+
+
+cvar = 'sic'
+yticks1 = []
+yticklabels1 = []
+# Plot simple time line of init_times
+f = plt.figure(figsize=(15,5))
+fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
+for (i_cm, c_model) in enumerate(E.model.keys()):
+# for (i_cm, c_model) in enumerate(['ukmo','gfdlsipn']):
+    print("Plotting model ", c_model)
+    # Load in Model
+    model_forecast = os.path.join(E.model[c_model][runType]['sipn_nc'], '*.nc')
+    # Check we have files 
+    files = glob.glob(model_forecast)
+    if not files:
+        print("Skipping model", c_model, "no forecast files found.")
+        continue # Skip this model
+    ds_model = xr.open_mfdataset(model_forecast)
+    ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
+
+    # Set attributes
+#         ds_model.attrs['model_label'] = E.model[c_model]['model_label']
+
+    # Select var of interest
+    ds_model = ds_model[cvar]
+
+    # Plot
+    cc = next(cmap_c)     
+    cmarker = next(markercycler)
+
+    x = ds_model.init_time.values
+    y = [i_cm for i in np.arange(0,x.size)]
+    plt.scatter(x, y, s=50, 
+                    facecolors=cc, edgecolors=cc, 
+                    marker=cmarker, label=E.model[c_model]['model_label'])
+    yticks1.append(i_cm)
+    yticklabels1.append(E.model[c_model]['model_label'])
+
+plt.xlim([lag_time_30days,ctime])
+plt.gcf().autofmt_xdate()
+plt.xlabel('Initialization Date')
+plt.gca().set_yticks(yticks1)
+plt.gca().set_yticklabels(yticklabels1)
+f.savefig(os.path.join(fig_dir,'Init_avail_recent.png'),bbox_inches='tight',dpi=200)
+plt.title('Availbility of Initialization Dates')
+
+
+# In[ ]:
 
 
 # Recent init_time VS. fore_time plot
