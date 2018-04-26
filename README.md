@@ -13,7 +13,7 @@ Collection of scripts for running the [SIPN2 Portal](http://www.atmos.uw.edu/sip
   - Evaluating model forecasts against observations
   - Creating maps and timeseries plots for website
   
-- /scripts/ contains a collectoin of bash shell and python scripts for:
+- /scripts/ contains a collection of bash shell and python scripts for:
   - Downloading observations
   - Downloading sea ice model forecasts.
   
