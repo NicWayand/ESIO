@@ -438,7 +438,9 @@ def polar_axis():
     ax.set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45))
     return (f, ax)
 
-def multi_polar_axis(ncols=4, nrows=4, Nplots=None, sizefcter=1):
+def multi_polar_axis(ncols=4, nrows=4, 
+                     Nplots=None, sizefcter=1,
+                     extent=None):
     if not Nplots:
         Nplots = ncols*nrows
     # Create a grid of plots
@@ -450,10 +452,15 @@ def multi_polar_axis(ncols=4, nrows=4, Nplots=None, sizefcter=1):
         axes[i].gridlines(crs=ccrs.PlateCarree(), linestyle='--', linewidth=0.20, color='grey')
         #ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
         # Full NSIDC extent
-        axes[i].set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45)) 
+        if not extent:
+            axes[i].set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45))
+        else: # Set Regional extent
+             axes[i].set_extent(extent, crs=ccrs.NorthPolarStereo(central_longitude=-45)) 
+                
         if i>=Nplots-1:
             f.delaxes(axes[i])  
     return (f, axes)
+
             
 ############################################################################
 # Evaluation functions
