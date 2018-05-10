@@ -12,3 +12,6 @@ pyconvert.sh plot_forecast_availability.ipynb
 pyconvert.sh plot_observations.ipynb
 pyconvert.sh Calc_adjusted_extents.ipynb
 pyconvert.sh plot_Regional_maps.ipynb
+pyconvert.sh Regrid_NESM.ipynb
+pyconvert.sh Regrid_RASM.ipynb
+

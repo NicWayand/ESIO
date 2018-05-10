@@ -16,6 +16,7 @@ set -e  # Stop on any error
 # Set up python paths
 source $HOME/.bashrc
 source activate esio
+which python
 
 # Make sure the ACF REPO_DIR environment variable is set
 if [ -z "$REPO_DIR" ]; then
@@ -23,35 +24,18 @@ if [ -z "$REPO_DIR" ]; then
     exit 1
 fi
 
-# Model downloads
-python $REPO_DIR"/scripts/download_scripts/Download_s2s.py" "recent" &
-python $REPO_DIR"/scripts/download_scripts/Download_C3S.py" "recent" &
-$REPO_DIR"/scripts/download_scripts/download_RASM_ESRL.sh" &
+# GET NRL model (weekly updated on wedneday) Download on Thursday
+$REPO_DIR"/scripts/download_scripts/download_NRL.sh"
 
+# Regrid them
 wait # Below depends on above
 
 # Move to notebooks
 cd $REPO_DIR"/notebooks/" # Need to move here as some esiodata functions assume this
 
 # Import Models to sipn format
-source activate test_nio # Requires new env
-python "./Regrid_S2S_Models.py"
-python "./Regrid_RASM.py"
+python "./Regrid_NESM.py"
 
-wait
-source activate esio
-wait # Below depends on above
+echo Finished Weekly script.
 
-# Make Plots
-# Availblity plots
-which python
-python "./plot_forecast_availability.py"
 
-# Both
-python "./plot_Extent_Model_Obs.py"
-
-# Models
-python "./plot_all_model_maps.py" &
-python "./plot_Regional_maps.py"
-
-echo Finished NRT script.
