@@ -5,6 +5,21 @@
 
 
 '''
+
+This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+If you use this code for a publication or presentation, please cite the reference in the README.md on the
+main page (https://github.com/NicWayand/ESIO). 
+
+Questions or comments should be addressed to nicway@uw.edu
+
+Copyright (c) 2018 Nic Wayand
+
+GNU General Public License v3.0
+
+
+'''
+
+'''
 Plot observed and modeled sea ice variables of interest.
 
 '''
@@ -63,6 +78,9 @@ start_time = timeit.default_timer()
 #                                    data_vars=['sic','extent','area'])
 ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='time', autoclose=True)
 print(timeit.default_timer() - start_time)
+
+# Get mean sic by DOY
+mean_1980_2010_sic = xr.open_dataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'mean_1980_2010_sic.nc')).sic
 
 
 # In[3]:
@@ -228,6 +246,10 @@ cmap_dif = matplotlib.colors.ListedColormap(sns.color_palette("RdBu", 10))
 cmap_dif.set_bad(color = 'lightgrey')
 
 
+cmap_diff_2 = matplotlib.colors.LinearSegmentedColormap.from_list("", ["red","white","blue"])
+cmap_diff_2.set_bad(color = 'lightgrey')
+
+
 # Plot Obs and model SIC for date
 (f, ax1) = esio.polar_axis()
 f.set_size_inches(10, 5)
@@ -240,6 +262,21 @@ obs1.plot.pcolormesh(ax=ax1, x='lon', y='lat',
 ax1.set_title('NSIDC NRT\n'+pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
 plt.tight_layout()
 f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map.png'),bbox_inches='tight',dpi=200)
+
+
+
+(f, ax1) = esio.polar_axis()
+f.set_size_inches(10, 5)
+# Obs NSIDC 0051
+obs1 = da_81.sel(time=ctime, method='nearest')
+cdoy = pd.to_datetime(ctime).timetuple().tm_yday
+(obs1-mean_1980_2010_sic.isel(time=cdoy)).plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+                                     transform=ccrs.PlateCarree(),
+                                     cmap=cmap_diff_2,
+                      vmin=-1, vmax=1, cbar_kwargs={'label':'SIC Anomaly (1980-2010 Mean)'})
+ax1.set_title('NSIDC NRT\n'+pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
+plt.tight_layout()
+f.savefig(os.path.join(fig_dir,'panArcticSIC_SIC_anomaly.png'),bbox_inches='tight',dpi=200)
 
 
 # Plot obs change from yesterday
@@ -257,7 +294,6 @@ ax1.set_title('2 Week Change\nNSIDC NRT\n'+pd.to_datetime(obs2.time.values).strf
              pd.to_datetime(obs1.time.values).strftime('%Y-%m-%d'))
 plt.tight_layout()
 f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map_2Week_Change.png'),bbox_inches='tight',dpi=200)
-
 
 
 # Plot obs change from last week

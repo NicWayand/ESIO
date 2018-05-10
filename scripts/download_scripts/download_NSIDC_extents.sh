@@ -1,5 +1,15 @@
 #!/bin/bash
 
+#This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+#If you use this code for a publication or presentation, please cite the reference in the README.md on the
+#main page (https://github.com/NicWayand/ESIO). 
+#
+#Questions or comments should be addressed to nicway@uw.edu
+#
+#Copyright (c) 2018 Nic Wayand
+#
+#GNU General Public License v3.0
+
 # Downloads data from nsidc
 set -x  # Echo all lines executed
 set -e  # Stop on any error

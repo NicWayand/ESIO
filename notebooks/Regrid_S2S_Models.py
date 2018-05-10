@@ -4,6 +4,20 @@
 # In[ ]:
 
 
+'''
+
+This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+If you use this code for a publication or presentation, please cite the reference in the README.md on the
+main page (https://github.com/NicWayand/ESIO). 
+
+Questions or comments should be addressed to nicway@uw.edu
+
+Copyright (c) 2018 Nic Wayand
+
+GNU General Public License v3.0
+
+
+'''
 # S2S and C3S Model Regrid
 
 # - Loads in all daily forecasts of sea ice extent
@@ -13,6 +27,21 @@
 
 # In[ ]:
 
+
+'''
+
+This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+If you use this code for a publication or presentation, please cite the reference in the README.md on the
+main page (https://github.com/NicWayand/ESIO). 
+
+Questions or comments should be addressed to nicway@uw.edu
+
+Copyright (c) 2018 Nic Wayand
+
+GNU General Public License v3.0
+
+
+'''
 
 # Standard Imports
 
@@ -29,10 +58,13 @@ import pandas as pd
 import xarray as xr
 import xesmf as xe
 import os
+import re
 import glob
 import seaborn as sns
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+import dask
 
 # ESIO Imports
 import esio
@@ -52,10 +84,10 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 E = ed.esiodata.load()
 # Directories
-# all_models = [ 'ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
-#               'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
-#               'jma', 'metreofr'] 
-all_models = ['ukmetofficesipn']
+all_models = [ 'ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
+              'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
+              'jma', 'metreofr'] 
+# all_models = [ 'metreofr']
 runType='forecast'
 updateall = False
 cvar = 'sic'
@@ -75,7 +107,7 @@ obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
 # Regridding Options
-method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
+method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
 # In[ ]:
@@ -84,32 +116,24 @@ method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', '
 # Store dictionary to convert each model variable names to sipn syntax
 var_dic = {}
 
-var_dic['cma'] = {'initial_time0_hours':'init_time',
-                 'lat_0':'lat', 'lon_0':'lon',
-                 'forecast_time0':'fore_time',
-                 'ICEC_P11_L1_GLL0_avg24h':'sic'}
+var_dic['cma'] = {'ICEC_P11_L1_GLL0_avg24h':'sic'}
+# 'initial_time0_hours':'init_time',
+#                  'lat_0':'lat', 'lon_0':'lon',
+#                  'forecast_time0':'fore_time',
 # guess it looks like cma
 for model in all_models:
     var_dic[model] = var_dic['cma']
 # Set models that are different
-var_dic['bom'] = {'initial_time0_hours':'init_time',
-                 'lat_0':'lat', 'lon_0':'lon',
-                 'forecast_time0':'fore_time',
-                 'ICEC_P11_L1_GGA0_avg24h':'sic'}
-
+var_dic['bom'] = {'ICEC_P11_L1_GGA0_avg24h':'sic'}
+# 'initial_time0_hours':'init_time',
+#                  'lat_0':'lat', 'lon_0':'lon',
+#                  'forecast_time0':'fore_time',
 # C3S models
-var_dic['ukmetofficesipn'] = {'initial_time1_hours':'init_time',
-                 'g0_lat_3':'lat', 'g0_lon_4':'lon',
-                 'forecast_time2':'fore_time',
-                 'ensemble0':'ensemble',
-                 'CI_GDS0_SFC':'sic'}
-var_dic['ecmwfsipn'] = {'initial_time1_hours':'init_time',
-                 'g0_lat_2':'lat', 'g0_lon_3':'lon',
-                 'forecast_time1':'fore_time',
-                 'ensemble0':'ensemble',
-                 'CI_GDS0_SFC':'sic'}
+var_dic['ukmetofficesipn'] = {'CI_GDS0_SFC':'sic'}
+var_dic['ecmwfsipn'] = {'CI_GDS0_SFC':'sic'}
+
 # list of models that have month init times
-monthly_init_model = ['ecmwfsipn']
+monthly_init_model = ['ecmwfsipn', 'ukmetofficesipn', 'metreofr']
 
 
 # In[ ]:
@@ -143,6 +167,15 @@ def test_plot():
     gl.yformatter = LATITUDE_FORMATTER
     ax1.coastlines(linewidth=0.75, color='black', resolution='50m');
     plt.title(model)
+    
+    # Plot SIC on target projection
+    (f, ax1) = esio.polar_axis()
+    f.set_size_inches((10,10))
+    ds_p = ds.sic.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
+    ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+                                         transform=ccrs.PlateCarree(),
+                                         cmap=cmap_sic)
+    ax1.set_title('Orginal Grid')
 
     # Plot SIC on target projection
     (f, ax1) = esio.polar_axis()
@@ -203,7 +236,9 @@ for model in all_models:
         
         # Some grib files do not have a init_time dim, because its assumed for the month
         if model in monthly_init_model:
-            if ('initial_time1_hours' not in ds.coords): # Check first
+            c_coords = list(ds.coords.dims.keys())
+            tar_coords = list(filter(re.compile('.*initial_time').match, c_coords))
+            if len(tar_coords)==0: # Check if we have no initial_time* coordinate
                 print('Adding init_time as decoder failed to get it.....')
                 ds.coords['initial_time1_hours'] = datetime.datetime(int(cf.split('.')[0].split('_')[1]), 
                                                               int(cf.split('.')[0].split('_')[2]), 1)
@@ -216,6 +251,8 @@ for model in all_models:
 
         # Rename variables per esipn guidelines
         ds.rename(var_dic[model], inplace=True);
+        # Rename coords
+        ds = esio.rename_coords(ds)
 
         # Apply masks (if available)
         if ds_mask:
@@ -223,7 +260,7 @@ for model in all_models:
             # (1-land_mask) is fraction ocean
             # Multiply sic by fraction ocean to get actual native grid cell sic
             # Also mask land out where land_mask==1
-            ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
+            ds[cvar] = ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
 
 
     #     # Set sic below 0 to 0
@@ -248,7 +285,9 @@ for model in all_models:
         weights_flag = True # Set true for following loops
 
         # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
-        regridder = esio.add_matrix_NaNs(regridder)
+        if method=='conservative':
+            print('Removing edge cells that contain source NaN cells, should probably check here')
+            regridder = esio.add_matrix_NaNs(regridder)
 
         # Regrid variable
         var_out = regridder(ds[cvar])
@@ -256,7 +295,7 @@ for model in all_models:
         # Expand dims
         var_out = esio.expand_to_sipn_dims(var_out)
         
-#         test_plot()
+        #test_plot()
 
         # # Save regridded to netcdf file
         var_out.to_netcdf(f_out)
@@ -272,6 +311,75 @@ for model in all_models:
     # Clean up
     if weights_flag:
         regridder.clean_weight_file()  # clean-up    
+
+
+# In[ ]:
+
+
+# cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10))
+# cmap_sic.set_bad(color = 'red')
+
+
+# # Plot SIC on target projection
+# (f, ax1) = esio.polar_axis()
+# f.set_size_inches((10,10))
+# ds_mask.land_mask.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+#                                      transform=ccrs.PlateCarree(),
+#                                      cmap='Blues')
+
+
+# In[ ]:
+
+
+# cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10))
+# cmap_sic.set_bad(color = 'red')
+
+
+# # # Plot SIC on target projection
+# # (f, ax1) = esio.polar_axis()
+# # f.set_size_inches((10,10))
+# # ds_mask.land_mask.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+# #                                      transform=ccrs.PlateCarree(),
+# #                                      cmap='Blues')
+
+# # # Plot SIC on target projection
+# # (f, ax1) = esio.polar_axis()
+# # f.set_size_inches((10,10))
+# # mask_out.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+# #                                      transform=ccrs.PlateCarree(),
+# #                                      cmap='Blues')
+
+# # Plot SIC on target projection
+# (f, ax1) = esio.polar_axis()
+# f.set_size_inches((10,10))
+# ds_p = ds.sic.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
+# ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+#                                      transform=ccrs.PlateCarree(),
+#                                      cmap=cmap_sic)
+# ax1.set_title('Orginal Grid')
+
+# # Plot SIC on target projection
+# (f, ax1) = esio.polar_axis()
+# f.set_size_inches((10,10))
+# ds_p2 = var_out.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
+# ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+#                                      transform=ccrs.PlateCarree(),
+#                                      cmap=cmap_sic)
+# ax1.set_title('Target Grid')
+
+
+# In[ ]:
+
+
+
+
+# # Plot SIC on target projection
+# (f, ax1) = esio.polar_axis()
+# f.set_size_inches((10,10))
+# (1 - ds_mask.land_mask.where(ds_mask.land_mask<1)).plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+#                                      transform=ccrs.PlateCarree(),
+#                                      cmap=cmap_sic)
+# ax1.set_title('mask we use')
 
 
 # In[ ]:

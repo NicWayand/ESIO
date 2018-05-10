@@ -8,6 +8,8 @@ import cartopy.crs as ccrs
 import seaborn as sns
 import itertools
 import os
+import re
+
 
 ''' Functions to process sea ice renalysis, reforecasts, and forecasts.'''
 
@@ -62,6 +64,21 @@ def preprocess_time(x):
     x.coords['fore_time'] = xtimes - xtimes[0]
    
     return x
+
+# Rename S2S and C3S coord names to sipn standard
+def rename_coords(ds):
+    c_cords = list(ds.coords.dims.keys())
+    c_dict = {'.*lat':'lat', '.*lon':'lon', '.*forecast_time':'fore_time', 
+              '.*initial_time':'init_time', '.*ensemble':'ensemble'}
+
+    new_dict = {}
+    for key, value in c_dict.items():
+        r = re.compile(key)
+        newlist = list(filter(r.match, c_cords))
+        if len(newlist)>0:
+            new_dict[newlist[0]] = value
+    ds = ds.rename(new_dict)
+    return ds
 
 # Open a single ensemble member
 def open_1_member(cfiles, e):
@@ -272,13 +289,16 @@ def calc_extent(da, region, extent_thress=0.15, fill_pole_hole=False):
     # TODO: Need to assert we pass in a DataArray of sic
     extent = (( da.where(region.mask.isin(region.ocean_regions)) >= extent_thress ).astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
     
+    # Mask out zero extents (occurs if ensemble changes size)
+    extent = extent.where(extent>0)
+    
     # Add in pole hole (optional)
     if fill_pole_hole:
         extent = extent + (da.hole_mask.astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
     return extent
 
 
-def agg_by_domain(da_grid=None, ds_region=None):
+def agg_by_domain(da_grid=None, ds_region=None, extent_thress=0.15):
     # TODO: add check for equal dims
     ds_list = []
     for cd in ds_region.nregions.values:
@@ -289,12 +309,13 @@ def agg_by_domain(da_grid=None, ds_region=None):
             # Make mask
             cmask = ds_region.mask==cd 
             # Multiple by cell area to get area of sea ice
-            da_avg = (da_grid.where(cmask==1)>=0.15).astype('int') * ds_region.area.where(cmask==1)
+            da_avg = (da_grid.where(cmask==1) >= extent_thress).astype('int') * ds_region.area.where(cmask==1)
             # Sum up over current domain and convert to millions of km^2
             #print((cmask * ds_region.area.where(cmask==1)).sum(dim='x').sum(dim='y') / (10**6))
             da_avg = da_avg.sum(dim='x').sum(dim='y') / (10**6)
-            # TODO: Add optoin to add in pole hole if obs and central arctic
+            # TODO: Add option to add in pole hole if obs and central arctic
             #print(da_avg.values)
+            
             # Add domain name
             da_avg['nregions'] = cd
             da_avg['region_names'] = region_name
@@ -353,6 +374,13 @@ def get_median_ice_edge(ds, ystart='1981', yend='2012', sic_threshold=0.15):
     median_ice = median_ice.groupby('time').median(dim='time')
     median_ice_fill = median_ice.where(median_ice.hole_mask==0, other=1).sic # Fill in pole hole with 1 (so contours don't get made around it)
     return median_ice_fill
+
+# Calc the Ice Free Day (frist) by Calender Year
+# For observations only
+def calc_IFD(da, sic_threshold=0.15):
+    ifd = (da < sic_threshold).reduce(np.argmax, dim='time') # Find index of first ice free
+    ifd = ifd.where(da.isel(time=0).notnull()) # Apply Orig mask
+    return ifd
     
 ############################################################################
 # Plotting functions
@@ -378,7 +406,7 @@ def plot_model_ensm(ds=None, axin=None, labelin=None, color='grey', marker=None)
         
 def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time', 
                     marker=None, init_dot=True, init_dot_label=True, linestyle='-', 
-                    no_init_label=False):
+                    no_init_label=False, linewidth=1.5):
     labeled = False
     if init_dot:
         init_label = 'Initialization'
@@ -422,7 +450,8 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
                     axin.plot(x[0], y[0], marker='*', linestyle='None', color='red', label=init_label)
                 
                 # Plot line
-                axin.plot(x, y, label=labelin, color=ccolor, marker=marker, linestyle=linestyle)
+                axin.plot(x, y, label=labelin, color=ccolor, marker=marker, linestyle=linestyle,
+                             linewidth=linewidth)
                 
                 labeled = True
             cds = None

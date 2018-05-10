@@ -1,8 +1,23 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
+
+'''
+
+This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+If you use this code for a publication or presentation, please cite the reference in the README.md on the
+main page (https://github.com/NicWayand/ESIO). 
+
+Questions or comments should be addressed to nicway@uw.edu
+
+Copyright (c) 2018 Nic Wayand
+
+GNU General Public License v3.0
+
+
+'''
 
 
 
@@ -38,9 +53,10 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 E = ed.esiodata.load()
 data_dir = E.data_dir
 grid_dir = E.grid_dir
+fig_dir = os.path.join(E.fig_dir, 'model', 'extent_test')
 
 
-# In[2]:
+# In[ ]:
 
 
 runType = 'forecast'
@@ -49,18 +65,18 @@ cvar = variables[0]
 test_plots = False
 
 
-# In[3]:
+# In[ ]:
 
 
 # Define models
 models_2_process = list(E.model.keys())
 models_2_process = [x for x in models_2_process if x!='piomas'] # remove some models
 # models_2_process = ['ukmetofficesipn','isaccnr','hcmr','ecmwf','cma']
-models_2_process = ['gfdlsipn']
+# models_2_process = ['cma']
 models_2_process
 
 
-# In[4]:
+# In[ ]:
 
 
 # Load in Obs
@@ -68,7 +84,7 @@ da_obs_in = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[5]:
+# In[ ]:
 
 
 # from dask.distributed import Client, progress
@@ -125,7 +141,7 @@ for (i, c_model) in enumerate(models_2_process):
                                               cmap=cmap_c,
                                               vmin=c_vmin, vmax=c_vmax)
         axes[1].set_title('Observed')
-
+        f.savefig(os.path.join(fig_dir, c_model+'_orig.png'))
 
         
         
@@ -158,6 +174,8 @@ for (i, c_model) in enumerate(models_2_process):
                                               cmap=cmap_c,
                                               vmin=c_vmin, vmax=c_vmax)
         axes[1].set_title('Observed')
+        f.savefig(os.path.join(fig_dir, c_model+'_adjusted.png'))
+        break
 
     
     # Calculate Sea Ice << EXTENT >>

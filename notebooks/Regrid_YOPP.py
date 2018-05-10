@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 # # YOPP Forecast
@@ -11,8 +11,23 @@
 # - Saves to netcdf files grouped by year
 
 
-# In[2]:
+# In[ ]:
 
+
+'''
+
+This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+If you use this code for a publication or presentation, please cite the reference in the README.md on the
+main page (https://github.com/NicWayand/ESIO). 
+
+Questions or comments should be addressed to nicway@uw.edu
+
+Copyright (c) 2018 Nic Wayand
+
+GNU General Public License v3.0
+
+
+'''
 
 # Standard Imports
 
@@ -38,7 +53,7 @@ import esio
 import esiodata as ed
 
 
-# In[3]:
+# In[ ]:
 
 
 # General plotting settings
@@ -46,21 +61,21 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[4]:
+# In[ ]:
 
 
 E = ed.esiodata.load()
 # Directories
 model='yopp'
 runType='forecast'
-updateall = True
+updateall = False
 data_dir = E.model[model][runType]['native']
 data_out = E.model[model][runType]['sipn_nc']
 model_grid_file = E.model[model]['grid']
 stero_grid_file = E.obs['NSIDC_0051']['grid']
 
 
-# In[5]:
+# In[ ]:
 
 
 obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
@@ -69,14 +84,14 @@ obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[6]:
+# In[ ]:
 
 
 # Regridding Options
-method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
+method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[7]:
+# In[ ]:
 
 
 ## TODO
@@ -84,7 +99,7 @@ method='bilinear' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', '
 # - Get lat lon bounds 
 
 
-# In[8]:
+# In[ ]:
 
 
 all_files = glob.glob(os.path.join(data_dir, 'yopp*ci*.grib'))
@@ -95,7 +110,7 @@ else:
     print("Only updating new files")
 
 
-# In[9]:
+# In[ ]:
 
 
 weights_flag = False # Flag to set up weights have been created
@@ -103,7 +118,7 @@ weights_flag = False # Flag to set up weights have been created
 cvar = 'sic'
 
 # Load land/sea mask file
-if model_grid_file!='MISSING':
+if os.path.basename(model_grid_file)!='MISSING':
     ds_mask = xr.open_dataset(model_grid_file)
 else:
     ds_mask = None
@@ -124,11 +139,13 @@ for cf in all_files:
     
     # Apply masks (if available)
     if ds_mask:
+        print('found mask')
         # land_mask is the fraction of native grid cell that is land
         # (1-land_mask) is fraction ocean
         # Multiply sic by fraction ocean to get actual native grid cell sic
         # Also mask land out where land_mask==1
-        ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
+        ds[cvar] = ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<0.9)) # Using 90% threshold here
+        
 
 #     ds.coords['nj'] = model_grid.nj
 #     ds.coords['ni'] = model_grid.ni
@@ -151,7 +168,8 @@ for cf in all_files:
     weights_flag = True # Set true for following loops
     
     # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
-    regridder = esio.add_matrix_NaNs(regridder)
+    if method=='conservative':
+        regridder = esio.add_matrix_NaNs(regridder)
     
     # Regrid variable
     var_out = regridder(ds[cvar])
@@ -166,7 +184,7 @@ for cf in all_files:
     print('Saved ', f_out)
 
 
-# In[10]:
+# In[ ]:
 
 
 # Clean up
@@ -176,7 +194,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[11]:
+# In[ ]:
 
 
 # sic_all = xr.open_dataset(f_out)
@@ -205,9 +223,20 @@ if weights_flag:
 # gl.yformatter = LATITUDE_FORMATTER
 # ax1.coastlines(linewidth=0.75, color='black', resolution='50m');
 
+
 # # Plot SIC on target projection
 # (f, ax1) = esio.polar_axis()
-# ds_p2 = sic_all.isel(init_time=1).isel(fore_time=79)
+# f.set_size_inches((10,10))
+# ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+#                                      transform=ccrs.PlateCarree(),
+#                                      cmap=cmap_sic)
+# ax1.set_title('Original Grid')
+
+
+# # Plot SIC on target projection
+# (f, ax1) = esio.polar_axis()
+# f.set_size_inches((10,10))
+# ds_p2 = sic_all.sic.isel(init_time=1).isel(fore_time=79).isel(ensemble=0)
 # ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),
 #                                      cmap=cmap_sic)

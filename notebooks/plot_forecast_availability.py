@@ -5,6 +5,21 @@
 
 
 '''
+
+This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+If you use this code for a publication or presentation, please cite the reference in the README.md on the
+main page (https://github.com/NicWayand/ESIO). 
+
+Questions or comments should be addressed to nicway@uw.edu
+
+Copyright (c) 2018 Nic Wayand
+
+GNU General Public License v3.0
+
+
+'''
+
+'''
 Plot model forecast avaibility
 '''
 
@@ -75,9 +90,9 @@ lag_time_30days = ctime - np.timedelta64(30, 'D')
 #############################################################
 E = ed.esiodata.load()
 
-cmap_c = itertools.cycle(sns.color_palette("Set2", len(E.model.keys()) ))
-markercycler = itertools.cycle(["*","o","s","v","x"])
-linecycler = itertools.cycle(["-","--","-.",":","--"])
+# cmap_c = itertools.cycle(sns.color_palette("Set2", len(E.model.keys()) ))
+# markercycler = itertools.cycle(["*","o","s","v","x"])
+# linecycler = itertools.cycle(["-","--","-.",":","--"])
 
 
 # In[6]:
@@ -108,18 +123,19 @@ for (i_cm, c_model) in enumerate(E.model.keys()):
     # Select var of interest
     ds_model = ds_model[cvar]
 
-    # Plot
-    cc = next(cmap_c)     
-    cmarker = next(markercycler)
+    # Get model plotting specs
+    cc = E.model_color[c_model]
+    cm = E.model_marker[c_model]
 
     x = ds_model.init_time.values
     y = [i_cm for i in np.arange(0,x.size)]
     plt.scatter(x, y, s=50, 
                     facecolors=cc, edgecolors=cc, 
-                    marker=cmarker, label=E.model[c_model]['model_label'])
+                    marker=cm, label=E.model[c_model]['model_label'])
     yticks1.append(i_cm)
     yticklabels1.append(E.model[c_model]['model_label'])
 
+plt.xlim([datetime.datetime(2015,1,1), ctime])
 plt.gcf().autofmt_xdate()
 plt.xlabel('Initialization Date')
 plt.gca().set_yticks(yticks1)
@@ -156,15 +172,15 @@ for (i_cm, c_model) in enumerate(E.model.keys()):
     # Select var of interest
     ds_model = ds_model[cvar]
 
-    # Plot
-    cc = next(cmap_c)     
-    cmarker = next(markercycler)
+    # Get model plotting specs
+    cc = E.model_color[c_model]
+    cm = E.model_marker[c_model]
 
     x = ds_model.init_time.values
     y = [i_cm for i in np.arange(0,x.size)]
     plt.scatter(x, y, s=50, 
                     facecolors=cc, edgecolors=cc, 
-                    marker=cmarker, label=E.model[c_model]['model_label'])
+                    marker=cm, label=E.model[c_model]['model_label'])
     yticks1.append(i_cm)
     yticklabels1.append(E.model[c_model]['model_label'])
 
@@ -177,7 +193,7 @@ f.savefig(os.path.join(fig_dir,'Init_avail_recent.png'),bbox_inches='tight',dpi=
 plt.title('Availbility of Initialization Dates')
 
 
-# In[ ]:
+# In[8]:
 
 
 # Recent init_time VS. fore_time plot
@@ -191,7 +207,7 @@ for cvar in variables:
     if not os.path.exists(fig_dir):
         os.makedirs(fig_dir)
     
-    f = plt.figure(figsize=(15,5))
+    f = plt.figure(figsize=(20,10))
     for c_model in E.model.keys():
 #     for c_model in ['yopp','gfdlsipn']:
         print("Plotting model ", c_model)
@@ -216,9 +232,8 @@ for cvar in variables:
         ds_model['valid_time'] = ds_model.init_time + ds_model.fore_time
 
         # Plot
-        cc = next(cmap_c)     
-        cmarker = next(markercycler)
-        clinen = next(linecycler)
+        cc = E.model_color[c_model]
+        cl = E.model_linestyle[c_model]
         haslabel = False
         for it in ds_model.init_time:
             if haslabel:
@@ -228,7 +243,7 @@ for cvar in variables:
                 
             x = ds_model.sel(init_time=it).valid_time.values
             y = [ds_model.sel(init_time=it).init_time.values for k in np.arange(0,x.size)]
-            plt.plot([x[0],x[-1]], [y[0],y[-1]], color=cc, label=clabel, linestyle=clinen)
+            plt.plot([x[0],x[-1]], [y[0],y[-1]], color=cc, label=clabel, linestyle=cl)
 #             plt.scatter(x, y, s=50, 
 #                         facecolors=cc, edgecolors=cc, 
 #                         label=clabel, marker=cmarker)
@@ -240,7 +255,7 @@ for cvar in variables:
     plt.xlabel('Valid Date')
     plt.ylabel('Initialization Date')
     #plt.axis('tight')
-    plt.legend(ncol=int(len(E.model.keys())/4), bbox_to_anchor=(1, -0.5))
+    plt.legend(ncol=int(len(E.model.keys())/4), loc='upper left', bbox_to_anchor=(0, -0.5))
     # End of all models
     f.savefig(os.path.join(fig_dir,'DataAvailable_'+cvar+'.png'),bbox_inches='tight',dpi=200)
 #     mpld3.save_html(f, os.path.join(fig_dir,'DataAvailable_'+cvar+'.html'))
