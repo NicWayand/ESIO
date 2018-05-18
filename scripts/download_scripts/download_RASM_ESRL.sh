@@ -33,7 +33,11 @@ mkdir -p $RASM_ESRL_DATA_DIR
 
 # Download
 cd $RASM_ESRL_DATA_DIR
-wget -nH --cut-dirs=2 -r -A "RASM-ESRL_4NIC*.gz" -N $data_ftp | tar -xzvf --strip=1 -C ../
+wget -nH --cut-dirs=20 -r -A "RASM-ESRL_4NIC*.gz" -N $data_ftp
+
+
+cd $REPO_DIR/scripts/download_scripts/
+./unzip_file.sh /home/disk/sipn/nicway/data/model/rasmesrl/forecast/native/ RASM-ESRL
 
 echo "Done!"
 

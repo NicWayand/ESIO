@@ -210,7 +210,8 @@ for cvar in variables:
                         continue # Skip this model
                         
                     ds_model = xr.open_mfdataset(model_forecast, 
-                                chunks={'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448})
+                                chunks={'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448},
+                                                concat_dim='init_time')
                     ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
                     
                    # Select init and fore_time of interest

@@ -6,6 +6,6 @@ zdir=$ncdir'/zipped_files/'$prefix'*'
 
 for f in $zdir
 do
-    #echo $f
-    tar -xzvf $f --strip=2 -C $ncdir
+    echo $f
+    tar --skip-old-files -xzvf $f --strip=2 -C $ncdir
 done

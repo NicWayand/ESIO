@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -55,7 +55,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 def remove_small_contours(p, thres=10):
@@ -73,7 +73,7 @@ def remove_small_contours(p, thres=10):
                 del(level.get_paths()[kp])  # no remove() for Path objects:(
 
 
-# In[3]:
+# In[ ]:
 
 
 # Plotting Info
@@ -84,7 +84,7 @@ metrics_all = {'sic':['anomaly','mean','SIP'], 'hi':['mean']}
 MME_NO = ['hcmr']
 
 
-# In[4]:
+# In[ ]:
 
 
 # Initialization times to plot
@@ -93,7 +93,7 @@ cd = datetime.datetime(cd.year, cd.month, cd.day) # Set hour min sec to 0.
 init_slice = np.arange(cd - datetime.timedelta(days=70), cd, datetime.timedelta(days=1))
 
 
-# In[5]:
+# In[ ]:
 
 
 # Forecast times to plot
@@ -104,7 +104,7 @@ slices = weeks.union(months).union(years).round('1d')
 da_slices = xr.DataArray(slices, dims=('fore_time'))
 
 
-# In[12]:
+# In[ ]:
 
 
 #############################################################
@@ -118,13 +118,7 @@ median_ice_fill = xr.open_mfdataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_n
 mean_1980_2010_sic = xr.open_dataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'mean_1980_2010_sic.nc')).sic
 
 
-# In[11]:
-
-
-
-
-
-# In[7]:
+# In[ ]:
 
 
 import timeit
@@ -133,7 +127,7 @@ ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='ti
 print(timeit.default_timer() - start_time)
 
 
-# In[8]:
+# In[ ]:
 
 
 # print(ds_51.time.min().values, ds_51.time.max().values)
@@ -141,7 +135,7 @@ print(timeit.default_timer() - start_time)
 # print(ds_79.time.min().values, ds_79.time.max().values)
 
 
-# In[9]:
+# In[ ]:
 
 
 # Define models to plot
@@ -149,7 +143,7 @@ models_2_plot = list(E.model.keys())
 models_2_plot = [x for x in models_2_plot if x!='piomas'] # remove some models
 
 
-# In[13]:
+# In[ ]:
 
 
 
@@ -168,7 +162,7 @@ for cvar in variables:
 
              
     print("Starting plots...")
-    for it in init_slice:
+    for it in np.flip(init_slice,axis=0): # Flip it here so plots backwards in time
         print(it)
         
         for (cs, ft) in enumerate(da_slices.values): 
@@ -264,7 +258,7 @@ for cvar in variables:
                         #print("Skipping model", cmod, "no forecast files found.")
                         continue # Skip this model
                     ds_model = xr.open_mfdataset(model_forecast, 
-                                chunks={'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448})
+                                chunks={'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448}, concat_dim='init_time')
                     ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
 

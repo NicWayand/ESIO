@@ -33,12 +33,12 @@ mkdir -p $NSIDC_NRL_DATA_DIR
 
 # Download
 cd $NSIDC_NRL_DATA_DIR
-wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ARC*.gz" -N $data_ftp &
-wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut_dirs=20 -r -A "ANT*.gz" -N $data_ftp
+wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ARC*121*.gz" -N $data_ftp
+wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ANT*121*.gz" -N $data_ftp
 
 # Unzip files
 cd $REPO_DIR/scripts/download_scripts/
-./unzip_file.sh /home/disk/sipn/nicway/data/model/usnavyncep/forecast/native ARC
+./unzip_file_nostrip.sh /home/disk/sipn/nicway/data/model/usnavyncep/forecast/native ARC
 
 echo "Done!"
 

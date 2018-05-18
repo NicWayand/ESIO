@@ -87,13 +87,13 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # - Get lat lon bounds 
 
 
-# In[19]:
+# In[7]:
 
 
 var_dic = {'aice':'sic','lat':'nj','lon':'ni','TLAT':'lat','TLON':'lon'}
 
 
-# In[20]:
+# In[8]:
 
 
 for model in all_models:
@@ -107,8 +107,8 @@ for model in all_models:
     # First parse files to see what unique init_times we have
     # ARCu0.08_121_2018042112_t0300.nc
     prefix = 'RASM-ESRL'
-    all_files = glob.glob(os.path.join(data_dir, prefix+'*.nc'))
-    init_times = list(set([s.split('_')[1].split('-0')[0] for s in all_files]))
+    all_files = sorted(glob.glob(os.path.join(data_dir, prefix+'*.nc')))
+    init_times = list(set([s.split('_')[1].split('-00')[0] for s in all_files]))
     
     print("Found ",len(init_times)," initialization times.")
     if updateall:
@@ -135,7 +135,7 @@ for model in all_models:
                 continue # Skip, file already imported
 
         c_files = sorted(glob.glob(os.path.join(data_dir, prefix+'*_'+cf+'*.nc')))
-        ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=False)
+        ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=False, autoclose=True)
 
         # Rename variables per esipn guidelines
         ds.rename(var_dic, inplace=True);
@@ -183,10 +183,11 @@ for model in all_models:
 
         ds_out.to_netcdf(f_out)
         ds_out = None # Memory clean up
+        ds = None
         print('Saved ', f_out)
 
 
-# In[21]:
+# In[9]:
 
 
 # Clean up
@@ -196,7 +197,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[31]:
+# In[10]:
 
 
 # sic_all = xr.open_mfdataset(f_out)

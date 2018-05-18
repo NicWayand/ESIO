@@ -67,7 +67,7 @@ metric1 = 'extent'
 # Initialization times to plot
 cd = datetime.datetime.now()
 cd = datetime.datetime(cd.year, cd.month, cd.day) # Assumes hours 00, min 00
-SD = cd - datetime.timedelta(days=40)
+SD = cd - datetime.timedelta(days=60)
 ED = cd + datetime.timedelta(days=365)
 
 
@@ -183,7 +183,8 @@ for cvar in variables:
             #print("Skipping model", cmod, "no forecast files found.")
             continue # Skip this model
         ds_model = xr.open_mfdataset(model_forecast, 
-                                     chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448})
+                                     chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448}, 
+                                     concat_dim='init_time')
         ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 #         print(ds_model)
         
@@ -234,7 +235,7 @@ for cvar in variables:
         
     # Plot observations
     print('Plotting observations')
-    ds_obs.Extent.where(ds_obs.time>=np.datetime64(SD)).plot(ax=ax1, label=str(cdate.year)+' Observed', color='m', linewidth=8)
+    ds_obs.Extent.where(ds_obs.time>=np.datetime64(SD), drop=True).plot(ax=ax1, label=str(cdate.year)+' Observed', color='m', linewidth=8)
     ax1.set_ylabel('Sea Ice Extent\n [Millions of square km]')
     cxlims = ax1.get_xlim()
 
@@ -289,7 +290,8 @@ for cvar in variables:
             #print("Skipping model", cmod, "no forecast files found.")
             continue # Skip this model
         ds_model = xr.open_mfdataset(model_forecast, 
-                                     chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448})
+                                     chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448},
+                                     concat_dim='init_time')
         ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 #         print(ds_model)
         
@@ -340,7 +342,7 @@ for cvar in variables:
         
     # Plot observations
     print('Plotting observations')
-    ds_obs.Extent.where(ds_obs.time>=np.datetime64(SD)).plot(ax=ax1, label=str(cdate.year)+' Observed', color='m', linewidth=8)
+    ds_obs.Extent.where(ds_obs.time>=np.datetime64(SD), drop=True).plot(ax=ax1, label=str(cdate.year)+' Observed', color='m', linewidth=8)
     ax1.set_ylabel('Sea Ice Extent\n [Millions of square km]')
     cxlims = ax1.get_xlim()
 

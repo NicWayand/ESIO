@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -44,7 +44,7 @@ import esio
 import esiodata as ed
 
 
-# In[2]:
+# In[ ]:
 
 
 # General plotting settings
@@ -52,7 +52,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[3]:
+# In[ ]:
 
 
 E = ed.esiodata.load()
@@ -62,7 +62,7 @@ runType='forecast'
 updateall = False
 
 
-# In[4]:
+# In[ ]:
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
@@ -72,14 +72,14 @@ obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[5]:
+# In[ ]:
 
 
 # Regridding Options
 method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[6]:
+# In[ ]:
 
 
 ## TODO
@@ -87,14 +87,14 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # - Get lat lon bounds 
 
 
-# In[7]:
+# In[ ]:
 
 
 # Set models that are different
 var_dic = {'aice':'sic'}
 
 
-# In[8]:
+# In[ ]:
 
 
 for model in all_models:
@@ -150,7 +150,7 @@ for model in all_models:
         ds.fore_time.attrs['units'] = 'Forecast offset from initial time'
         ds = ds.drop(['time'])
         ds.coords['fore_time'] = ds.fore_time.astype('timedelta64[h]') 
-        ds.coords['valid_time'] = ds.fore_time + ds.init_time
+        #ds.coords['valid_time'] = ds.fore_time + ds.init_time
 
         # Apply masks (if available)
         if ds_mask:
@@ -186,7 +186,7 @@ for model in all_models:
         print('Saved ', f_out)
 
 
-# In[9]:
+# In[ ]:
 
 
 # Clean up
@@ -196,7 +196,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[10]:
+# In[ ]:
 
 
 # sic_all = xr.open_mfdataset(f_out)

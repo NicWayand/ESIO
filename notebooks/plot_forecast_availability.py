@@ -114,7 +114,7 @@ for (i_cm, c_model) in enumerate(E.model.keys()):
     if not files:
         print("Skipping model", c_model, "no forecast files found.")
         continue # Skip this model
-    ds_model = xr.open_mfdataset(model_forecast)
+    ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
     ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
     # Set attributes
@@ -163,7 +163,7 @@ for (i_cm, c_model) in enumerate(E.model.keys()):
     if not files:
         print("Skipping model", c_model, "no forecast files found.")
         continue # Skip this model
-    ds_model = xr.open_mfdataset(model_forecast)
+    ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
     ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
     # Set attributes
@@ -196,68 +196,68 @@ plt.title('Availbility of Initialization Dates')
 # In[8]:
 
 
-# Recent init_time VS. fore_time plot
-c_xlim = [datetime.datetime.now() - datetime.timedelta(days=30), 
-          datetime.datetime.now() + datetime.timedelta(days=30*6)]
-c_ylim = [datetime.datetime.now() - datetime.timedelta(days=60), 
-          datetime.datetime.now() - datetime.timedelta(days=1)]
-for cvar in variables:
+# # Recent init_time VS. fore_time plot
+# c_xlim = [datetime.datetime.now() - datetime.timedelta(days=30), 
+#           datetime.datetime.now() + datetime.timedelta(days=30*6)]
+# c_ylim = [datetime.datetime.now() - datetime.timedelta(days=60), 
+#           datetime.datetime.now() - datetime.timedelta(days=1)]
+# for cvar in variables:
 
-    fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
-    if not os.path.exists(fig_dir):
-        os.makedirs(fig_dir)
+#     fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
+#     if not os.path.exists(fig_dir):
+#         os.makedirs(fig_dir)
     
-    f = plt.figure(figsize=(20,10))
-    for c_model in E.model.keys():
-#     for c_model in ['yopp','gfdlsipn']:
-        print("Plotting model ", c_model)
-        # Load in Model
-        model_forecast = os.path.join(E.model[c_model][runType]['sipn_nc'], '*.nc')
-        # Check we have files 
-        files = glob.glob(model_forecast)
-        if not files:
-            print("Skipping model", c_model, "no forecast files found.")
-            continue # Skip this model
-        ds_model = xr.open_mfdataset(model_forecast)
-        ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
+#     f = plt.figure(figsize=(20,10))
+#     for c_model in E.model.keys():
+# #     for c_model in ['yopp','gfdlsipn']:
+#         print("Plotting model ", c_model)
+#         # Load in Model
+#         model_forecast = os.path.join(E.model[c_model][runType]['sipn_nc'], '*.nc')
+#         # Check we have files 
+#         files = glob.glob(model_forecast)
+#         if not files:
+#             print("Skipping model", c_model, "no forecast files found.")
+#             continue # Skip this model
+#         ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
+#         ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
-        # Set attributes
-        ds_model.attrs['model_label'] = E.model[c_model]['model_label']
+#         # Set attributes
+#         ds_model.attrs['model_label'] = E.model[c_model]['model_label']
 
-        # Select var of interest
-        ds_model = ds_model[cvar]
+#         # Select var of interest
+#         ds_model = ds_model[cvar]
 
-        # Check if any data for each init/fore time
-        #ds_model = ds_model.notnull().any(dim='x').any(dim='y').astype('int')
-        ds_model['valid_time'] = ds_model.init_time + ds_model.fore_time
+#         # Check if any data for each init/fore time
+#         #ds_model = ds_model.notnull().any(dim='x').any(dim='y').astype('int')
+#         ds_model['valid_time'] = ds_model.init_time + ds_model.fore_time
 
-        # Plot
-        cc = E.model_color[c_model]
-        cl = E.model_linestyle[c_model]
-        haslabel = False
-        for it in ds_model.init_time:
-            if haslabel:
-                clabel = '_nolegend_'
-            else:
-                clabel = E.model[c_model]['model_label']
+#         # Plot
+#         cc = E.model_color[c_model]
+#         cl = E.model_linestyle[c_model]
+#         haslabel = False
+#         for it in ds_model.init_time:
+#             if haslabel:
+#                 clabel = '_nolegend_'
+#             else:
+#                 clabel = E.model[c_model]['model_label']
                 
-            x = ds_model.sel(init_time=it).valid_time.values
-            y = [ds_model.sel(init_time=it).init_time.values for k in np.arange(0,x.size)]
-            plt.plot([x[0],x[-1]], [y[0],y[-1]], color=cc, label=clabel, linestyle=cl)
-#             plt.scatter(x, y, s=50, 
-#                         facecolors=cc, edgecolors=cc, 
-#                         label=clabel, marker=cmarker)
-            haslabel = True
+#             x = ds_model.sel(init_time=it).valid_time.values
+#             y = [ds_model.sel(init_time=it).init_time.values for k in np.arange(0,x.size)]
+#             plt.plot([x[0],x[-1]], [y[0],y[-1]], color=cc, label=clabel, linestyle=cl)
+# #             plt.scatter(x, y, s=50, 
+# #                         facecolors=cc, edgecolors=cc, 
+# #                         label=clabel, marker=cmarker)
+#             haslabel = True
 
-    plt.xlim(c_xlim)
-    plt.ylim(c_ylim)
-    plt.gcf().autofmt_xdate()
-    plt.xlabel('Valid Date')
-    plt.ylabel('Initialization Date')
-    #plt.axis('tight')
-    plt.legend(ncol=int(len(E.model.keys())/4), loc='upper left', bbox_to_anchor=(0, -0.5))
-    # End of all models
-    f.savefig(os.path.join(fig_dir,'DataAvailable_'+cvar+'.png'),bbox_inches='tight',dpi=200)
-#     mpld3.save_html(f, os.path.join(fig_dir,'DataAvailable_'+cvar+'.html'))
+#     plt.xlim(c_xlim)
+#     plt.ylim(c_ylim)
+#     plt.gcf().autofmt_xdate()
+#     plt.xlabel('Valid Date')
+#     plt.ylabel('Initialization Date')
+#     #plt.axis('tight')
+#     plt.legend(ncol=int(len(E.model.keys())/4), loc='upper left', bbox_to_anchor=(0, -0.5))
+#     # End of all models
+#     f.savefig(os.path.join(fig_dir,'DataAvailable_'+cvar+'.png'),bbox_inches='tight',dpi=200)
+# #     mpld3.save_html(f, os.path.join(fig_dir,'DataAvailable_'+cvar+'.html'))
 
 

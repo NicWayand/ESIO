@@ -106,7 +106,8 @@ for (i, c_model) in enumerate(models_2_process):
     # Load in Model
     model_forecast = os.path.join(E.model[c_model][runType]['sipn_nc'], '*.nc')
     ds_model = xr.open_mfdataset(model_forecast, 
-                                         chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448})
+                                         chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448},
+                                            concat_dim='init_time')
     ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
     # Set attributes

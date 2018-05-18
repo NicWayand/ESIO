@@ -47,10 +47,11 @@ wait # Below depends on above
 which python
 python "./plot_forecast_availability.py"
 
-# Both
-python "./plot_Extent_Model_Obs.py"
+# Extents
+python "./plot_Extent_Model_Obs.py" &
+python "./plot_Regional_Extent.py"
 
-# Models
+# Maps
 python "./plot_all_model_maps.py" &
 python "./plot_Regional_maps.py"
 
