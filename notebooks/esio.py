@@ -283,8 +283,11 @@ def split_by_lat(ds, latVal=65.0, want=None):
          raise ValueError('Value for want not found. Use above or below.')
     return ds_out
 
-def calc_extent(da, region, extent_thress=0.15, fill_pole_hole=False):
+def calc_extent(da=None, region=None, extent_thress=0.15, fill_pole_hole=False):
     ''' Returns extent in millions of km^2 within all ocean regions (NO LAKES!)'''
+
+    if 'x' not in da.dims:
+        raise ValueError('x not found in dims.... might need to rename spatial dims')
     
     # TODO: Need to assert we pass in a DataArray of sic
     extent = (( da.where(region.mask.isin(region.ocean_regions)) >= extent_thress ).astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
@@ -295,10 +298,11 @@ def calc_extent(da, region, extent_thress=0.15, fill_pole_hole=False):
     # Add in pole hole (optional)
     if fill_pole_hole:
         extent = extent + (da.hole_mask.astype('int') * region.area).sum(dim='x').sum(dim='y')/(10**6)
+        
     return extent
 
 
-def agg_by_domain(da_grid=None, ds_region=None, extent_thress=0.15):
+def agg_by_domain(da_grid=None, ds_region=None, extent_thress=0.15, fill_pole_hole=False):
     # TODO: add check for equal dims
     ds_list = []
     for cd in ds_region.nregions.values:
@@ -311,10 +315,10 @@ def agg_by_domain(da_grid=None, ds_region=None, extent_thress=0.15):
             # Multiple by cell area to get area of sea ice
             da_avg = (da_grid.where(cmask==1) >= extent_thress).astype('int') * ds_region.area.where(cmask==1)
             # Sum up over current domain and convert to millions of km^2
-            #print((cmask * ds_region.area.where(cmask==1)).sum(dim='x').sum(dim='y') / (10**6))
             da_avg = da_avg.sum(dim='x').sum(dim='y') / (10**6)
             # TODO: Add option to add in pole hole if obs and central arctic
-            #print(da_avg.values)
+            if fill_pole_hole:
+                raise ValueError('Not implemented')
             
             # Add domain name
             da_avg['nregions'] = cd

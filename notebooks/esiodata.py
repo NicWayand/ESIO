@@ -36,7 +36,7 @@ class esiodata(object):
         
         # Loop through new dirs
         new_dirs = ['forecast','reanalysis','reforecast']
-        new_s_dirs = ['native','sipn_nc']
+        new_s_dirs = ['native','sipn_nc','sipn_nc_agg']
         nd_dict = {}
         for nd in new_dirs:
             # Create it
