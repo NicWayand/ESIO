@@ -42,6 +42,10 @@ wait
 source activate esio
 wait # Below depends on above
 
+# Calc Aggregate metrics (e.g. extent for different regions)
+python "./Calc_Model_Aggregations.py"
+
+
 # Make Plots
 # Availblity plots
 which python

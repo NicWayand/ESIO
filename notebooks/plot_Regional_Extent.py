@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -52,7 +52,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[2]:
 
 
 # Plotting Info
@@ -61,7 +61,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[ ]:
+# In[3]:
 
 
 # Initialization times to plot
@@ -71,7 +71,7 @@ SD = cd - datetime.timedelta(days=90)
 ED = cd + datetime.timedelta(days=365)
 
 
-# In[ ]:
+# In[4]:
 
 
 # Info about models runs
@@ -87,7 +87,7 @@ ED = cd + datetime.timedelta(days=365)
 
 
 
-# In[ ]:
+# In[5]:
 
 
 #############################################################
@@ -96,7 +96,7 @@ ED = cd + datetime.timedelta(days=365)
 E = ed.esiodata.load()
 
 
-# In[ ]:
+# In[6]:
 
 
 # Load obs
@@ -106,7 +106,7 @@ ds_obs = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='t
 print(timeit.default_timer() - start_time)
 
 
-# In[ ]:
+# In[7]:
 
 
 # Load in regional data
@@ -114,7 +114,7 @@ print(timeit.default_timer() - start_time)
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[ ]:
+# In[8]:
 
 
 cdate = datetime.datetime.now()
@@ -122,7 +122,7 @@ cdate = datetime.datetime.now()
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[ ]:
+# In[9]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))
@@ -149,24 +149,17 @@ for cvar in variables:
                 continue
             print(cmod)
             # Load in Model
-            model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc'], '*.nc')
+            model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc_agg'], '*.nc')
 
             # Check we have files 
             files = glob.glob(model_forecast)
             if not files:
                 #print("Skipping model", cmod, "no forecast files found.")
-                continue # Skip this model # 
-            ds_model = xr.open_mfdataset(model_forecast, 
-                                         chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448}, 
-                                         concat_dim='init_time')
-            ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
-    #         print(ds_model)
+                continue # Skip this model
+            ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
 
-            # Select var of interest (if available)
-            if cvar in ds_model.variables:
-                ds_model = ds_model[cvar]
-            else:
-                continue
+            # Get Extent
+            ds_model = ds_model.Extent
 
             # Select init of interest
             ds_model = ds_model.where(ds_model.init_time>=np.datetime64(SD), drop=True)
@@ -175,17 +168,7 @@ for cvar in variables:
 #             ds_model = ds_model.mean(dim='ensemble')
 
             # Select region
-            # Lat and Long feilds have round off differences, so set to same here
-            ds_model['lat'] = ds_region.lat
-            ds_model['lon'] = ds_region.lon
-            ds_model = ds_model.where(ds_region.mask==cR)
-
-    #         Reduce to extent or area
-            if metric1 == 'extent':
-                ds_model = ((ds_model >= 0.15).astype('int') * ds_region.area).sum(dim='x').sum(dim='y') /(10**6)
-#                 ds_model = esio.calc_extent(ds_model, ds_region)
-            else:
-                raise ValueError('Not implemented')
+            ds_model = ds_model.sel(nregions=cR)
 
             # Get model plotting specs
             cc = E.model_color[cmod]

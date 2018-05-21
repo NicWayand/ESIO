@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -52,7 +52,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 # Plotting Info
@@ -61,24 +61,14 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[3]:
+# In[ ]:
 
 
 # Initialization times to plot
 cd = datetime.datetime.now()
 cd = datetime.datetime(cd.year, cd.month, cd.day) # Assumes hours 00, min 00
-SD = cd - datetime.timedelta(days=60)
+SD = cd - datetime.timedelta(days=90)
 ED = cd + datetime.timedelta(days=365)
-
-
-# In[4]:
-
-
-# Info about models runs
-# icePredicted = {'gfdlsipn':True, 'piomas':True, 'yopp':True, 'bom':False, 'cma':True, 'ecmwf':True, 
-#               'hcmr':False, 'isaccnr':False, 'jma':False, 'metreofr':True, 'ukmo':True, 'eccc':False, 
-#               'kma':True, 'ncep':True, 'ukmetofficesipn':True, 'ecmwfsipn':True}
-# biasCorrected = 
 
 
 # In[ ]:
@@ -87,7 +77,7 @@ ED = cd + datetime.timedelta(days=365)
 
 
 
-# In[5]:
+# In[ ]:
 
 
 #############################################################
@@ -96,7 +86,7 @@ ED = cd + datetime.timedelta(days=365)
 E = ed.esiodata.load()
 
 
-# In[6]:
+# In[ ]:
 
 
 
@@ -113,14 +103,14 @@ ds_ext = xr.open_dataset(os.path.join(E.obs['NSIDC_extent']['sipn_nc'], 'N_seaic
 ds_ext = ds_ext.rename({'datetime':'time'})
 
 
-# In[7]:
+# In[ ]:
 
 
 # Combine extent obs using highest quality first
 ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first(da_81)
 
 
-# In[8]:
+# In[ ]:
 
 
 # Load in regional data
@@ -128,7 +118,13 @@ ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[9]:
+# In[ ]:
+
+
+cdate = datetime.datetime.now()
+
+
+# In[ ]:
 
 
 ds_per = ds_obs.sel(time=slice('1980','2010'))
@@ -137,7 +133,6 @@ ds_per['time'] = DOY # replace
 ds_per_mean = ds_per.groupby('time').mean().Extent
 ds_per_std = ds_per.groupby('time').std().Extent
 # Adjust dates to this year
-cdate = datetime.datetime.now()
 ds_per_mean['time'] = (ds_per_mean.time -1).astype('timedelta64[D]') + np.datetime64(datetime.datetime(cdate.year,1,1))
 ds_per_std['time'] = (ds_per_std.time -1).astype('timedelta64[D]') + np.datetime64(datetime.datetime(cdate.year,1,1))
 # append next year because some plots go into future
@@ -153,7 +148,7 @@ ds_per_std = xr.concat([ds_per_std,ds_per_std_2], dim='time')
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[10]:
+# In[ ]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))
@@ -175,39 +170,24 @@ for cvar in variables:
             continue
         print(cmod)
         # Load in Model
-        model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc'], '*.nc')
+        model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc_agg'], '*.nc')
 
         # Check we have files 
         files = glob.glob(model_forecast)
         if not files:
             #print("Skipping model", cmod, "no forecast files found.")
             continue # Skip this model
-        ds_model = xr.open_mfdataset(model_forecast, 
-                                     chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448}, 
-                                     concat_dim='init_time')
-        ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
-#         print(ds_model)
+        ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
+         
+        # Get Extent
+        ds_model = ds_model.Extent
         
-        # Select var of interest (if available)
-        if cvar in ds_model.variables:
-            ds_model = ds_model[cvar]
-        else:
-            continue
-        
-        # Select init of interest
-        ds_model = ds_model.where(ds_model.init_time>=np.datetime64(SD), drop=True)
-        
-        # Select last init
-#         ds_model = ds_model.sel(init_time=ds_model.init_time.values[-1]).expand_dims('init_time')
-#         print('only plotting last one inits')
-
-#         Reduce to extent or area
-        if metric1 == 'extent':
-#             ds_model = ((ds_model >= 0.15).astype('int') * ds_region.area).sum(dim='x').sum(dim='y')/(10**6)
-            ds_model = esio.calc_extent(ds_model, ds_region)
-        else:
-            raise ValueError('Not implemented')
+        # Select the panArctic Region (99)
+        ds_model = ds_model.sel(nregions=99)
             
+        # Select init of interest
+        ds_model = ds_model.where(ds_model.init_time >= np.datetime64(SD), drop=True)
+        
         # Get model plotting specs
         cc = E.model_color[cmod]
         cl = E.model_linestyle[cmod]
@@ -264,7 +244,7 @@ for cvar in variables:
 
 # # Plot raw extents
 
-# In[11]:
+# In[ ]:
 
 
 for cvar in variables:
@@ -281,41 +261,26 @@ for cvar in variables:
 #     for (i, cmod) in enumerate(['ukmetofficesipn']):
         print(cmod)
 
-        # Load in Model
-        model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc'], '*.nc')
+        # Load in model
+        model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc_agg'], '*.nc')
 
         # Check we have files 
         files = glob.glob(model_forecast)
         if not files:
             #print("Skipping model", cmod, "no forecast files found.")
             continue # Skip this model
-        ds_model = xr.open_mfdataset(model_forecast, 
-                                     chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448},
-                                     concat_dim='init_time')
-        ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
-#         print(ds_model)
+        ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
+         
+        # Get Extent
+        ds_model = ds_model.Extent
         
-        # Select var of interest (if available)
-        if cvar in ds_model.variables:
-            ds_model = ds_model[cvar]
-        else:
-            continue
-        
-        # Select init of interest
-        ds_model = ds_model.where(ds_model.init_time>=np.datetime64(SD), drop=True)
-        
-        # Select last init
-#         ds_model = ds_model.sel(init_time=ds_model.init_time.values[-1]).expand_dims('init_time')
-#         print('only plotting last one inits')
-
-#         Reduce to extent or area
-        if metric1 == 'extent':
-#             ds_model = ((ds_model >= 0.15).astype('int') * ds_region.area).sum(dim='x').sum(dim='y')/(10**6)
-            ds_model = esio.calc_extent(ds_model, ds_region)
-        else:
-            raise ValueError('Not implemented')
+        # Select the panArctic Region (99)
+        ds_model = ds_model.sel(nregions=99)
             
-        # Get color
+        # Select init of interest
+        ds_model = ds_model.where(ds_model.init_time >= np.datetime64(SD), drop=True)
+        
+        # Get model plotting specs
         cc = E.model_color[cmod]
         cl = E.model_linestyle[cmod]
 
@@ -369,7 +334,7 @@ for cvar in variables:
 #     mpld3.save_html(f, os.path.join(fig_dir,'panArctic_'+metric1+'_'+runType+'_raw_all.html'))
 
 
-# In[12]:
+# In[ ]:
 
 
 # Testing memory usage

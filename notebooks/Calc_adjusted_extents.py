@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -56,7 +56,7 @@ grid_dir = E.grid_dir
 fig_dir = os.path.join(E.fig_dir, 'model', 'extent_test')
 
 
-# In[ ]:
+# In[2]:
 
 
 runType = 'forecast'
@@ -65,7 +65,7 @@ cvar = variables[0]
 test_plots = False
 
 
-# In[ ]:
+# In[3]:
 
 
 # Define models
