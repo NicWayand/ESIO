@@ -102,7 +102,7 @@ cvar = 'sic'
 yticks1 = []
 yticklabels1 = []
 # Plot simple time line of init_times
-f = plt.figure(figsize=(15,5))
+f = plt.figure(figsize=(15,7))
 fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
 for (i_cm, c_model) in enumerate(E.model.keys()):
 # for (i_cm, c_model) in enumerate(['ukmo','gfdlsipn']):
@@ -151,7 +151,7 @@ cvar = 'sic'
 yticks1 = []
 yticklabels1 = []
 # Plot simple time line of init_times
-f = plt.figure(figsize=(15,5))
+f = plt.figure(figsize=(15,7))
 fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
 for (i_cm, c_model) in enumerate(E.model.keys()):
 # for (i_cm, c_model) in enumerate(['ukmo','gfdlsipn']):

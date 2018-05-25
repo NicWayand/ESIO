@@ -68,7 +68,9 @@ metric1 = 'extent'
 cd = datetime.datetime.now()
 cd = datetime.datetime(cd.year, cd.month, cd.day) # Assumes hours 00, min 00
 SD = cd - datetime.timedelta(days=90)
-ED = cd + datetime.timedelta(days=365)
+# SD = cd - datetime.timedelta(days=4*365)
+
+# ED = cd + datetime.timedelta(days=365)
 
 
 # In[4]:
@@ -81,12 +83,6 @@ ED = cd + datetime.timedelta(days=365)
 # biasCorrected = 
 
 
-# In[ ]:
-
-
-
-
-
 # In[5]:
 
 
@@ -96,7 +92,7 @@ ED = cd + datetime.timedelta(days=365)
 E = ed.esiodata.load()
 
 
-# In[6]:
+# In[ ]:
 
 
 # Load obs
@@ -106,7 +102,7 @@ ds_obs = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='t
 print(timeit.default_timer() - start_time)
 
 
-# In[7]:
+# In[ ]:
 
 
 # Load in regional data
@@ -114,7 +110,7 @@ print(timeit.default_timer() - start_time)
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[8]:
+# In[ ]:
 
 
 cdate = datetime.datetime.now()
@@ -122,7 +118,7 @@ cdate = datetime.datetime.now()
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[9]:
+# In[ ]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))

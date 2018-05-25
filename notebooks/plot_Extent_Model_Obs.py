@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -52,7 +52,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[2]:
 
 
 # Plotting Info
@@ -61,7 +61,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[ ]:
+# In[3]:
 
 
 # Initialization times to plot
@@ -71,13 +71,20 @@ SD = cd - datetime.timedelta(days=90)
 ED = cd + datetime.timedelta(days=365)
 
 
+# In[4]:
+
+
+# Models not to plot
+no_plot = ['rasmesrl']
+
+
 # In[ ]:
 
 
 
 
 
-# In[ ]:
+# In[5]:
 
 
 #############################################################
@@ -86,7 +93,7 @@ ED = cd + datetime.timedelta(days=365)
 E = ed.esiodata.load()
 
 
-# In[ ]:
+# In[6]:
 
 
 
@@ -103,14 +110,14 @@ ds_ext = xr.open_dataset(os.path.join(E.obs['NSIDC_extent']['sipn_nc'], 'N_seaic
 ds_ext = ds_ext.rename({'datetime':'time'})
 
 
-# In[ ]:
+# In[7]:
 
 
 # Combine extent obs using highest quality first
 ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first(da_81)
 
 
-# In[ ]:
+# In[8]:
 
 
 # Load in regional data
@@ -118,13 +125,13 @@ ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[ ]:
+# In[9]:
 
 
 cdate = datetime.datetime.now()
 
 
-# In[ ]:
+# In[10]:
 
 
 ds_per = ds_obs.sel(time=slice('1980','2010'))
@@ -162,9 +169,11 @@ for cvar in variables:
     # New Plot
     f = plt.figure(figsize=(15,10))
     ax1 = plt.subplot(1, 1, 1) # Observations
-
-    for (i, cmod) in enumerate(E.model.keys()):
+    
 #     for (i, cmod) in enumerate(['yopp']):
+    for (i, cmod) in enumerate(E.model.keys()):
+        if cmod in no_plot:
+            continue
         
         if not E.icePredicted[cmod]:
             continue
@@ -207,10 +216,11 @@ for cvar in variables:
                              labelin=E.model[cmod]['model_label'],
                              color=cc, marker=None,
                              linestyle=cl,
-                             no_init_label=no_init_label)
+                             no_init_label=no_init_label,
+                             fade_out=False)
         print( (timeit.default_timer() - start_time), ' seconds.' )
         
-        # Memeory clean up
+        # Memory clean up
         ds_model = None
         
     # Plot observations
@@ -258,6 +268,8 @@ for cvar in variables:
     ax1 = plt.subplot(1, 1, 1) # Observations
 
     for (i, cmod) in enumerate(E.model.keys()):
+        if cmod in no_plot:
+            continue
 #     for (i, cmod) in enumerate(['ukmetofficesipn']):
         print(cmod)
 

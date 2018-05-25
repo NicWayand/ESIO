@@ -410,7 +410,7 @@ def plot_model_ensm(ds=None, axin=None, labelin=None, color='grey', marker=None)
         
 def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time', 
                     marker=None, init_dot=True, init_dot_label=True, linestyle='-', 
-                    no_init_label=False, linewidth=1.5):
+                    no_init_label=False, linewidth=1.5, fade_out=False):
     labeled = False
     if init_dot:
         init_label = 'Initialization'
@@ -432,6 +432,11 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
             if color=='cycle_ensemble':
                 ccolor = next(cmap_c)
             
+            if fade_out:
+                c_alpha = 0.1 # Starting alpha value (low becasue we plot forward in time)
+                dt_alpha = 1/ds.init_time.size # increment to increase by
+            else:
+                c_alpha = 1 # Plot all with 1
             for it in ds.init_time:
                 
                 if labeled:
@@ -455,7 +460,9 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
                 
                 # Plot line
                 axin.plot(x, y, label=labelin, color=ccolor, marker=marker, linestyle=linestyle,
-                             linewidth=linewidth)
+                             linewidth=linewidth, alpha=c_alpha)
+                if fade_out:
+                    c_alpha = np.min([c_alpha + dt_alpha, 1])
                 
                 labeled = True
             cds = None

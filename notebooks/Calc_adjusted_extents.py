@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -56,7 +56,7 @@ grid_dir = E.grid_dir
 fig_dir = os.path.join(E.fig_dir, 'model', 'extent_test')
 
 
-# In[2]:
+# In[ ]:
 
 
 runType = 'forecast'
@@ -65,14 +65,14 @@ cvar = variables[0]
 test_plots = False
 
 
-# In[3]:
+# In[ ]:
 
 
 # Define models
-models_2_process = list(E.model.keys())
-models_2_process = [x for x in models_2_process if x!='piomas'] # remove some models
+# models_2_process = list(E.model.keys())
+# models_2_process = [x for x in models_2_process if x not in ['piomas','MME']] # remove some models
 # models_2_process = ['ukmetofficesipn','isaccnr','hcmr','ecmwf','cma']
-# models_2_process = ['cma']
+models_2_process = ['rasmesrl','noaasipn', 'noaasipn_ext']
 models_2_process
 
 
@@ -106,8 +106,8 @@ for (i, c_model) in enumerate(models_2_process):
     # Load in Model
     model_forecast = os.path.join(E.model[c_model][runType]['sipn_nc'], '*.nc')
     ds_model = xr.open_mfdataset(model_forecast, 
-                                         chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448},
-                                            concat_dim='init_time')
+                 chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448},
+                    concat_dim='init_time')
     ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
     # Set attributes
@@ -183,13 +183,18 @@ for (i, c_model) in enumerate(models_2_process):
     da_obs_avg = esio.calc_extent(da_obs.sic, ds_region)
     da_mod_avg = esio.calc_extent(da_mod.sic, ds_region)
 
-    da_mod_avg #.fore_time.values.astype('timedelta64[D]')
+    #da_mod_avg #.fore_time.values.astype('timedelta64[D]')
 
     # Force model and observations to have the same temporal time step (and slice or average)
     # Get model and obs time step
     dt_obs = (da_obs_avg.time[1] - da_obs_avg.time[0]).values # Time slices
     dt_mod = (da_mod_avg.fore_time[1] - da_mod_avg.fore_time[0]).values
     freq_dict = {np.timedelta64(86400000000000,'ns'):'1D', np.timedelta64(1,'M'):'MS'} # TODO: find a way to automate this....
+    
+    # Check is a valid time step
+    if dt_mod not in freq_dict.keys():
+        print('dt_mod value of', dt_mod.astype('timedelta64[h]'), ' not found in freq_dict keys ', freq_dict.keys())
+        continue
 
     # Aggregate to larger time step
     if dt_obs > dt_mod:
@@ -287,48 +292,48 @@ for (i, c_model) in enumerate(models_2_process):
 # In[ ]:
 
 
-ds_mrg = xr.open_dataset(os.path.join(out_dir, c_model+'_extent.nc'))
-print(ds_mrg.sic.notnull().sum())
+# ds_mrg = xr.open_dataset(os.path.join(out_dir, c_model+'_extent.nc'))
+# print(ds_mrg.sic.notnull().sum())
 
-cmap_diff = matplotlib.colors.ListedColormap(sns.diverging_palette(20,  220, n=21))
+# cmap_diff = matplotlib.colors.ListedColormap(sns.diverging_palette(20,  220, n=21))
 
-MOdiff = (ds_mrg.sic.sel(ensemble=0) - ds_mrg.sic.sel(ensemble=-1) )
-abs_max = np.max([MOdiff.min()*-1, MOdiff.max()])
+# MOdiff = (ds_mrg.sic.sel(ensemble=0) - ds_mrg.sic.sel(ensemble=-1) )
+# abs_max = np.max([MOdiff.min()*-1, MOdiff.max()])
 
-plt.figure(figsize=(20,5))
+# plt.figure(figsize=(20,5))
 
-plt.pcolormesh(ds_mrg.init_time.values, ds_mrg.fore_time.values.astype('timedelta64[D]').astype('int'), MOdiff.T.values,
-              cmap=cmap_diff, vmin=-1*abs_max, vmax=abs_max)
-plt.ylabel('Lead time [Days]')
-plt.xlabel('Initialization Time')
-cb = plt.colorbar(orientation='horizontal', label='Difference in extent (model-observed)\n[millions of km^2]', pad=0.25)
-
-
-rmse_fore_time = np.sqrt(((MOdiff**2).sum(dim='init_time').values)/MOdiff.init_time.size)
-plt.figure(figsize=(5,5))
-plt.plot(MOdiff.fore_time.values.astype('timedelta64[D]').astype('int'), rmse_fore_time)
-plt.ylabel('RMSE [millions of km^2]')
-plt.xlabel('Lead time [Days]')
-
-rmse_init_time = np.sqrt(((MOdiff**2).sum(dim='fore_time').values)/MOdiff.fore_time.size)
-plt.figure(figsize=(20,5))
-plt.plot(MOdiff.init_time.values, rmse_init_time)
-plt.ylabel('RMSE [millions of km^2]')
-plt.xlabel('Initialization Time')
+# plt.pcolormesh(ds_mrg.init_time.values, ds_mrg.fore_time.values.astype('timedelta64[D]').astype('int'), MOdiff.T.values,
+#               cmap=cmap_diff, vmin=-1*abs_max, vmax=abs_max)
+# plt.ylabel('Lead time [Days]')
+# plt.xlabel('Initialization Time')
+# cb = plt.colorbar(orientation='horizontal', label='Difference in extent (model-observed)\n[millions of km^2]', pad=0.25)
 
 
+# rmse_fore_time = np.sqrt(((MOdiff**2).sum(dim='init_time').values)/MOdiff.init_time.size)
+# plt.figure(figsize=(5,5))
+# plt.plot(MOdiff.fore_time.values.astype('timedelta64[D]').astype('int'), rmse_fore_time)
+# plt.ylabel('RMSE [millions of km^2]')
+# plt.xlabel('Lead time [Days]')
 
-# Plot pan-Arctic sea ice extent
-f = plt.figure(figsize=(10,5))
-ax1 = plt.subplot(1, 1, 1) # Observations
-esio.plot_reforecast(ds=ds_mrg.sel(ensemble=slice(0,ds_mrg.ensemble.size)).sic, axin=ax1, labelin=ds_model.model_label,
-                     color='cycle_ensemble', marker=None)
-ds_obs_trim.plot(label='NSIDC NRT', color='k')
-# ds_ext.Extent.plot(label='NSIDC V3', color='m')
-ax1.set_ylabel('Sea Ice Extent\n [Millions of square km]')
-plt.legend(loc='lower right',bbox_to_anchor=(1.03, 1.05))
-f.autofmt_xdate()
-plt.title('')
+# rmse_init_time = np.sqrt(((MOdiff**2).sum(dim='fore_time').values)/MOdiff.fore_time.size)
+# plt.figure(figsize=(20,5))
+# plt.plot(MOdiff.init_time.values, rmse_init_time)
+# plt.ylabel('RMSE [millions of km^2]')
+# plt.xlabel('Initialization Time')
+
+
+
+# # Plot pan-Arctic sea ice extent
+# f = plt.figure(figsize=(10,5))
+# ax1 = plt.subplot(1, 1, 1) # Observations
+# esio.plot_reforecast(ds=ds_mrg.sel(ensemble=slice(0,ds_mrg.ensemble.size)).sic, axin=ax1, labelin=ds_model.model_label,
+#                      color='cycle_ensemble', marker=None)
+# ds_obs_trim.plot(label='NSIDC NRT', color='k')
+# # ds_ext.Extent.plot(label='NSIDC V3', color='m')
+# ax1.set_ylabel('Sea Ice Extent\n [Millions of square km]')
+# plt.legend(loc='lower right',bbox_to_anchor=(1.03, 1.05))
+# f.autofmt_xdate()
+# plt.title('')
 
 
 # In[ ]:

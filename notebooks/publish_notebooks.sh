@@ -16,4 +16,5 @@ pyconvert.sh Regrid_NESM.ipynb
 pyconvert.sh Regrid_RASM.ipynb
 pyconvert.sh plot_Regional_Extent.ipynb
 pyconvert.sh Calc_Model_Aggregations.ipynb
+pyconvert.sh Regrid_CFSv2.ipynb
 

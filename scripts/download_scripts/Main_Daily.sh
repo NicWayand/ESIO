@@ -37,6 +37,7 @@ cd $REPO_DIR"/notebooks/" # Need to move here as some esiodata functions assume 
 source activate test_nio # Requires new env
 python "./Regrid_S2S_Models.py"
 python "./Regrid_RASM.py"
+python "./Regrid_CFSv2.py"
 
 wait
 source activate esio

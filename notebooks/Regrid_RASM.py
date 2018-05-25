@@ -108,6 +108,8 @@ for model in all_models:
     # ARCu0.08_121_2018042112_t0300.nc
     prefix = 'RASM-ESRL'
     all_files = sorted(glob.glob(os.path.join(data_dir, prefix+'*.nc')))
+    # Remove init times that started on 12 our (only a few at begining of record)
+    all_files = [x for x in all_files if '-12_t' not in x]
     init_times = list(set([s.split('_')[1].split('-00')[0] for s in all_files]))
     
     print("Found ",len(init_times)," initialization times.")
@@ -150,7 +152,7 @@ for model in all_models:
         ds.fore_time.attrs['units'] = 'Forecast offset from initial time'
         ds = ds.drop(['time'])
         ds.coords['fore_time'] = ds.fore_time.astype('timedelta64[h]') 
-        ds.coords['valid_time'] = ds.fore_time + ds.init_time
+#         ds.coords['valid_time'] = ds.fore_time + ds.init_time
 
         # Apply masks (if available)
         if ds_mask:
