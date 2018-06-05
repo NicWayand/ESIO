@@ -155,7 +155,7 @@ ds_per_std = xr.concat([ds_per_std,ds_per_std_2], dim='time')
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[ ]:
+# In[11]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))
@@ -223,6 +223,22 @@ for cvar in variables:
         # Memory clean up
         ds_model = None
         
+        
+    # Hack plot of models that only provide bias corrected SIE
+    model= 'noaasipn'
+    data_dir = os.path.join('/home/disk/sipn/upload/', model, runType)
+    prefix = 'sie2'
+    all_files = sorted(glob.glob(os.path.join(data_dir, '**', prefix+'*.nc'), recursive=True))
+    clabel = label='ncep-exp-bias-corr'
+    for cf in all_files:
+        ds_model = xr.open_mfdataset(cf, concat_dim='time').rename({'ens':'ensemble','sie':'Extent','time':'valid_time'}, inplace=True)
+        ds_model = ds_model.where(ds_model.valid_time>=np.datetime64(SD), drop=True).Extent
+        ds_model.coords['valid_time'] = ds_model.valid_time + np.timedelta64(15, 'D') # monthly average, so plot point as middle of month (not ideal but no daily available)
+        
+        for e in ds_model.ensemble:
+            ds_model.sel(ensemble=e).plot( label=clabel, color='k', linewidth=1, alpha=0.5)
+            clabel = '_nolegend_'
+        
     # Plot observations
     print('Plotting observations')
     ds_obs.Extent.where(ds_obs.time>=np.datetime64(SD), drop=True).plot(ax=ax1, label=str(cdate.year)+' Observed', color='m', linewidth=8)
@@ -254,7 +270,7 @@ for cvar in variables:
 
 # # Plot raw extents
 
-# In[ ]:
+# In[12]:
 
 
 for cvar in variables:
@@ -346,7 +362,7 @@ for cvar in variables:
 #     mpld3.save_html(f, os.path.join(fig_dir,'panArctic_'+metric1+'_'+runType+'_raw_all.html'))
 
 
-# In[ ]:
+# In[13]:
 
 
 # Testing memory usage

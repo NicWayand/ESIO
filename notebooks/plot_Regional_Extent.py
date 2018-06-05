@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -52,7 +52,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 # Plotting Info
@@ -61,7 +61,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[3]:
+# In[ ]:
 
 
 # Initialization times to plot
@@ -73,7 +73,7 @@ SD = cd - datetime.timedelta(days=90)
 # ED = cd + datetime.timedelta(days=365)
 
 
-# In[4]:
+# In[ ]:
 
 
 # Info about models runs
@@ -83,7 +83,7 @@ SD = cd - datetime.timedelta(days=90)
 # biasCorrected = 
 
 
-# In[5]:
+# In[ ]:
 
 
 #############################################################
@@ -186,7 +186,9 @@ for cvar in variables:
             print( (timeit.default_timer() - start_time), ' seconds.' )
 
             # Memeory clean up
-            ds_model = None
+            ds_model = None     
+            
+                
 
         # Plot observations
         print('Plotting observations')

@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -44,7 +44,7 @@ import esio
 import esiodata as ed
 
 
-# In[2]:
+# In[ ]:
 
 
 # General plotting settings
@@ -52,17 +52,17 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[3]:
+# In[ ]:
 
 
 E = ed.esiodata.load()
 # Directories
-all_models=['usnavyncep','usnavysipn']
+all_models=['noaasipn']
 runType='forecast'
 updateall = False
 
 
-# In[4]:
+# In[ ]:
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
@@ -72,14 +72,14 @@ obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[5]:
+# In[ ]:
 
 
 # Regridding Options
 method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[6]:
+# In[ ]:
 
 
 ## TODO
@@ -87,31 +87,38 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # - Get lat lon bounds 
 
 
-# In[7]:
+# In[ ]:
 
 
-# Set models that are different
-var_dic = {'aice':'sic'}
+var_dic = {'time':'valid_time','ens':'ensemble'}
 
 
-# In[8]:
+# In[ ]:
+
+
+# Option to shift time stamp from begining of month to end
+monthly_in = {'noaasipn':True}
+
+
+# In[ ]:
 
 
 for model in all_models:
     print('Regridding ', model, '...')
     
-    data_dir = E.model[model][runType]['native']
+    if model=='noaasipn':
+        data_dir = os.path.join('/home/disk/sipn/upload/', model, runType)
+    else:
+        data_dir = E.model[model][runType]['native']
+        
     data_out = E.model[model][runType]['sipn_nc']
     model_grid_file = E.model[model]['grid']
     
-    # Files are stored as per time step (about 45 per init_time)
-    # First parse files to see what unique init_times we have
-    # ARCu0.08_121_2018042112_t0300.nc
-    prefix = 'ARCu0'
-    all_files = glob.glob(os.path.join(data_dir, prefix+'*.nc'))
-    init_times = list(set([s.split('_')[2] for s in all_files]))
-    
-    print("Found ",len(init_times)," initialization times.")
+    # Files are stored as one per month, average of ensemble
+    prefix = 'sicens'
+    all_files = sorted(glob.glob(os.path.join(data_dir, '**', prefix+'*.nc'), recursive=True))
+
+    print("Found ",len(all_files)," files.")
     if updateall:
         print("Updating all files...")
     else:
@@ -126,31 +133,34 @@ for model in all_models:
     else:
         ds_mask = None
 
-    for cf in init_times:
+    for cf in all_files:
         # Check if already imported and skip (unless updateall flag is True)
-        f_out = os.path.join(data_out, prefix+'_'+cf+'_Stereo.nc') # netcdf file out 
+        f_out = os.path.join(data_out, os.path.basename(cf).split('.')[0]+'_Stereo.nc') # netcdf file out 
         if not updateall:
             # TODO: Test if the file is openable (not corrupted)
             if os.path.isfile(f_out):
-                print("Skipping ", cf, " already imported.")
+                print("Skipping ", os.path.basename(all_files[0]), " already imported.")
                 continue # Skip, file already imported
 
-        c_files = sorted(glob.glob(os.path.join(data_dir, prefix+'*_'+cf+'*.nc')))
-        ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=False)
+        ds = xr.open_mfdataset(cf)
 
         # Rename variables per esipn guidelines
         ds.rename(var_dic, inplace=True);
+        
+        # Get initialization time
+        ds.coords['init_time'] = ds.valid_time.isel(valid_time=0).values # get first one
+        ds.coords['init_time'].attrs['comments'] = 'Initilzation time of forecast'
+        # Set forecast time
+        ds.coords['fore_time'] = ds.valid_time - ds.init_time
+        # Swap record dim
+        ds.swap_dims({'valid_time':'fore_time'}, inplace=True)
+        # Drop valid time
+        ds = ds.drop('valid_time')
 
-        # Format times
-        ds.coords['init_time'] = np.datetime64(ds.tau.attrs['time_origin'])
-        ds.coords['tau'] = ds.tau
-
-        ds.swap_dims({'time':'tau'}, inplace=True)
-        ds.rename({'tau':'fore_time'}, inplace=True)
-        ds.fore_time.attrs['units'] = 'Forecast offset from initial time'
-        ds = ds.drop(['time'])
-        ds.coords['fore_time'] = ds.fore_time.astype('timedelta64[h]') 
-        #ds.coords['valid_time'] = ds.fore_time + ds.init_time
+        # Shift time stamp to middle of month
+        if monthly_in[model]:
+            print("shifting monthly time stamp to middle of month")
+            ds.coords['init_time'] = ds.init_time + np.timedelta64(15, 'D')
 
         # Apply masks (if available)
         if ds_mask:
@@ -170,7 +180,6 @@ for model in all_models:
             regridder = esio.add_matrix_NaNs(regridder)
 
         # Regrid variables
-
         var_list = []
         for cvar in ds.data_vars:
             var_list.append(regridder(ds[cvar]))
@@ -180,13 +189,13 @@ for model in all_models:
         ds_out = esio.expand_to_sipn_dims(ds_out)
 
         # # Save regridded to netcdf file
-
         ds_out.to_netcdf(f_out)
         ds_out = None # Memory clean up
+        ds = None
         print('Saved ', f_out)
 
 
-# In[9]:
+# In[ ]:
 
 
 # Clean up
@@ -196,7 +205,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[10]:
+# In[ ]:
 
 
 # sic_all = xr.open_mfdataset(f_out)
@@ -208,7 +217,7 @@ if weights_flag:
 # # Plot original projection
 # plt.figure(figsize=(20,10))
 # ax1 = plt.axes(projection=ccrs.PlateCarree())
-# ds_p = ds.sic.isel(fore_time=79)
+# ds_p = ds.sic.isel(fore_time=8)
 # ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                  vmin=0, vmax=1,
 #                                  cmap=matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10)),
@@ -223,7 +232,14 @@ if weights_flag:
 
 # # Plot SIC on target projection
 # (f, ax1) = esio.polar_axis()
-# ds_p2 = sic_all.sic.isel(init_time=0).isel(fore_time=79).isel(ensemble=0)
+# ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
+#                                      transform=ccrs.PlateCarree(),
+#                                      cmap=cmap_sic)
+# ax1.set_title('Original Grid')
+
+# # Plot SIC on target projection
+# (f, ax1) = esio.polar_axis()
+# ds_p2 = sic_all.sic.isel(init_time=0).isel(fore_time=8).isel(ensemble=0)
 # ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),
 #                                      cmap=cmap_sic)

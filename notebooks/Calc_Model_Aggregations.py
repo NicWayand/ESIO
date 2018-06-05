@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -20,7 +20,7 @@ GNU General Public License v3.0
 '''
 
 
-# In[5]:
+# In[ ]:
 
 
 # Standard Imports
@@ -46,38 +46,29 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import dask
 # dask.set_options(get=dask.threaded.get)
-
 from dask.distributed import Client
-
 
 # ESIO Imports
 import esio
 import esiodata as ed
 
 
-# General plotting settings
-sns.set_style('whitegrid')
-sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
-
-E = ed.esiodata.load()
-model_dir = E.model_dir
-# Directories
-# Define models to plot
-all_models = list(E.model.keys())
-all_models = [x for x in all_models if x not in ['piomas','MME']] # remove some models
-# all_models = ['cma']
-runType='forecast'
-updateall = False
-
-
-
-ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
-
-
-# In[3]:
+# In[ ]:
 
 
 def Update_Model_Aggs():
+    
+    E = ed.esiodata.load()
+    model_dir = E.model_dir
+    # Directories
+    # Define models to plot
+    all_models = list(E.model.keys())
+    all_models = [x for x in all_models if x not in ['piomas','MME']] # remove some models
+    # all_models = ['noaasipn']
+    runType='forecast'
+    updateall = False
+
+    ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
     for model in all_models:
         print(model)
@@ -143,7 +134,7 @@ def Update_Model_Aggs():
         print("Finished...")
 
 
-# In[4]:
+# In[ ]:
 
 
 if __name__ == '__main__':

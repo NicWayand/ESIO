@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -35,12 +35,15 @@ import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 # ESIO Imports
 import esio
 import esiodata as ed
 
 import dask
+
+# from dask.distributed import Client
 
 
 # General plotting settings
@@ -56,50 +59,65 @@ grid_dir = E.grid_dir
 fig_dir = os.path.join(E.fig_dir, 'model', 'extent_test')
 
 
-# In[ ]:
+# In[2]:
 
 
-runType = 'forecast'
+runType = 'reforecast'
 variables = ['sic']
 cvar = variables[0]
 test_plots = False
 
 
-# In[ ]:
+# In[3]:
 
 
 # Define models
 # models_2_process = list(E.model.keys())
 # models_2_process = [x for x in models_2_process if x not in ['piomas','MME']] # remove some models
 # models_2_process = ['ukmetofficesipn','isaccnr','hcmr','ecmwf','cma']
-models_2_process = ['rasmesrl','noaasipn', 'noaasipn_ext']
+models_2_process = ['gfdlsipn']
 models_2_process
 
 
-# In[ ]:
+# In[4]:
+
+
+# c = Client()
+# c
+
+
+# In[5]:
 
 
 # Load in Obs
-da_obs_in = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='time', autoclose=True)
-ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
+obs_source = 'NSIDC_0051'
+# with dask.set_options(get=c.get):
+da_obs_in = xr.open_mfdataset(E.obs[obs_source]['sipn_nc']+'_yearly/*.nc', concat_dim='time', autoclose=True, parallel=True,
+                             chunks={'time':1, 'x': 304, 'y': 448})
 
 
-# In[ ]:
+# In[6]:
+
+
+ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
+
+
+# In[7]:
 
 
 # from dask.distributed import Client, progress
-# client = Client(processes=12)
+# client = Client()
 # client
 
 
-# In[ ]:
+# In[8]:
 
 
 for (i, c_model) in enumerate(models_2_process):
     print(c_model)
     
     # Output temp dir
-    out_dir =  os.path.join(data_dir, 'model', c_model , 'forecast', 'agg_nc')
+    out_dir =  os.path.join(data_dir, 'model', c_model , runType, 'agg_nc')
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
@@ -183,18 +201,39 @@ for (i, c_model) in enumerate(models_2_process):
     da_obs_avg = esio.calc_extent(da_obs.sic, ds_region)
     da_mod_avg = esio.calc_extent(da_mod.sic, ds_region)
 
-    #da_mod_avg #.fore_time.values.astype('timedelta64[D]')
-
+    # Get Model Valid times
+    if 'fore_offset' in da_mod_avg.coords:
+        print('Found fore_offset!')
+        # Then fore_time is just an index for fore_offset (i.e. monthly data)
+        # TODO remove hard corded months (get from fore_offset)
+        fore_time_offset = np.array([relativedelta(months=+x) for x in da_mod_avg.fore_time.values])
+        # Switch types around so we can add datetime64[ns] with an object of relativedelta, then convert back
+        valid_time = xr.DataArray(da_mod_avg.init_time.values.astype('M8[D]').astype('O'), dims='init_time') +  xr.DataArray(fore_time_offset, dims='fore_time')
+        valid_time = valid_time.astype('datetime64[ns]')
+    else:
+        valid_time = da_mod_avg.init_time + da_mod_avg.fore_time
+        
+    da_mod_avg.coords['valid_time'] = valid_time
+    
     # Force model and observations to have the same temporal time step (and slice or average)
     # Get model and obs time step
     dt_obs = (da_obs_avg.time[1] - da_obs_avg.time[0]).values # Time slices
-    dt_mod = (da_mod_avg.fore_time[1] - da_mod_avg.fore_time[0]).values
+    dt_mod = (da_mod_avg.valid_time.isel(init_time=0)[1] - da_mod_avg.valid_time.isel(init_time=0)[0]).values
+    print(dt_mod)
     freq_dict = {np.timedelta64(86400000000000,'ns'):'1D', np.timedelta64(1,'M'):'MS'} # TODO: find a way to automate this....
     
     # Check is a valid time step
     if dt_mod not in freq_dict.keys():
         print('dt_mod value of', dt_mod.astype('timedelta64[h]'), ' not found in freq_dict keys ', freq_dict.keys())
-        continue
+        
+        # Check if dt_mod is close to monthly (GFDL), and add it (HACK)
+        # TODO: Feed time step directly into resample() without going through alias (http://pandas.pydata.org/pandas-docs/stable/timeseries.html#offset-aliases)
+        if (dt_mod.astype('timedelta64[D]').astype('int') > 27) & (dt_mod.astype('timedelta64[D]').astype('int') < 32):
+            freq_dict[dt_mod] = 'MS' 
+            freq_dict[dt_obs] = 'MS'
+            print('Looks like monthly data so guess start of month (MS)')
+        else:
+            continue # Skip this model
 
     # Aggregate to larger time step
     if dt_obs > dt_mod:
@@ -224,8 +263,12 @@ for (i, c_model) in enumerate(models_2_process):
     print('Building dask graph....')
     da_l = []
     for (j, it) in enumerate(ds_mod_trim.init_time):
-        c_obs = ds_obs_trim.sel(time = (ds_mod_trim.init_time.sel(init_time=it)  
-                                        + ds_mod_trim.fore_time).rename({'fore_time':'time'}) )
+        print(it.values)
+        # Get only non-missing fore_tiem (do to month issue)
+        # HACK... TODO.. this approach is slow, need to handel month time deltas in xarray (outstanding issue)
+#         I_ft = ds_mod_trim.fore_time.where(ds_mod_trim.sel(init_time=it).isel(ensemble=0).notnull(), drop=True)
+        
+        c_obs = ds_obs_trim.sel(time = (ds_mod_trim.valid_time.sel(init_time=it)).rename({'fore_time':'time'}) )
         c_obs = c_obs.rename({'time':'fore_time'})
         c_obs['fore_time'] = ds_mod_trim.fore_time
         c_obs.coords['ensemble'] = -1 # set to -1 for obs
@@ -270,6 +313,13 @@ for (i, c_model) in enumerate(models_2_process):
 #     %time mrg = mrg.compute()
 #     mrg.to_netcdf(os.path.join(out_dir, c_model+'_extent.nc')) 
 #     print('Done')
+
+
+# In[ ]:
+
+
+# valid_time = xr.DataArray(da_mod_avg.init_time.values.astype('M8[D]').astype('O'), dims='init_time') +  xr.DataArray(fore_time_offset, dims='fore_time')
+# valid_time.astype('datetime64[ns]')
 
 
 # In[ ]:

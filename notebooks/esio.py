@@ -9,6 +9,7 @@ import seaborn as sns
 import itertools
 import os
 import re
+from dateutil.relativedelta import relativedelta
 
 
 ''' Functions to process sea ice renalysis, reforecasts, and forecasts.'''
@@ -17,10 +18,19 @@ import re
 # Regridding/Inporting functions
 ############################################################################
 
-def preprocess_time_OLD(x):
+def preprocess_time_monthly(x):
     ''' Convert time to initialization and foreast lead time (to fit into orthoganal matrices)
     Input Dims: lat x lon x Time
-    Output Dims: lat x lon x init_time x fore_time_i'''
+    Output Dims: lat x lon x init_time x fore_time
+    
+    Where we represent fore_time as monthly increments
+    
+    '''
+    
+    Nmons = x.average_T1.size
+    m_i = np.arange(0,Nmons)
+    #m_dt = np.array([relativedelta(months=+x) for x in m_i])
+    m_dt = ['month' for x in m_i] # list of 'month'
     
     # Set record dimension of 'time' to the beinging of averaging period 'average_T1'
     x['time'] = x.average_T1
@@ -32,17 +42,14 @@ def preprocess_time_OLD(x):
     x.coords['init_time'] = xtimes[0] # get first one
     x.coords['init_time'].attrs['comments'] = 'Initilzation time of forecast'
 
-    # Get forecast time in days from initilization
-    x.rename({'time':'fore_time_i'}, inplace=True);
-    x.coords['fore_time_i'] = np.arange(0,12,1)
-    x.fore_time_i.attrs['units'] = 'Index of forecast dates'
+    # Get forecast time (as timedeltas from init_time)
+    x.rename({'time':'fore_time'}, inplace=True);
+    x.coords['fore_time'] = xr.DataArray(m_i, dims='fore_time')
     
-    # Store actual forecast dates
-    x.coords['fore_time'] = xr.DataArray(xtimes, dims=('fore_time_i'), coords={'fore_time_i':x.fore_time_i})
-    x.fore_time.attrs['comments'] = 'Date of forecast'
-    
+    # Set time offset for index in fore_time
+    x.coords['fore_offset'] = xr.DataArray(m_dt, dims='fore_time', coords={'fore_time':x.fore_time})
+   
     return x
-
 
 def preprocess_time(x):
     ''' Convert time to initialization and foreast lead time (to fit into orthoganal matrices)
@@ -78,6 +85,20 @@ def rename_coords(ds):
         if len(newlist)>0:
             new_dict[newlist[0]] = value
     ds = ds.rename(new_dict)
+    return ds
+
+# Open a single ensemble member
+def open_1_member_monthly(cfiles, e):
+    ds = xr.open_mfdataset(cfiles, concat_dim='init_time', decode_times=False, 
+                           preprocess=lambda x: preprocess_time_monthly(x),
+                           autoclose=True)
+    
+    # Sort init_time (if more than one)
+    if ds.init_time.size>1:
+        ds = ds.reindex(init_time=sorted(ds.init_time.values))
+        
+    # Add ensemble coord
+    ds.coords['ensemble'] = e
     return ds
 
 # Open a single ensemble member
@@ -389,28 +410,10 @@ def calc_IFD(da, sic_threshold=0.15):
 ############################################################################
 # Plotting functions
 ############################################################################
-
-def plot_model_ensm(ds=None, axin=None, labelin=None, color='grey', marker=None):
-    # TODO: too slow, need to speed up
-    labeled = False
-    for e in ds.ensemble:
-        if labeled:
-            labelin = '_nolegend_'
-        # Check if it has multiple init_times
-        if 'init_time' in ds.dims:
-            for it in ds.init_time:
-                
-                axin.plot(ds.fore_time.sel(init_time=it), 
-                          ds.sel(ensemble=e).sel(init_time=it), label=labelin, color=color, marker=marker)
-                
-        else: # just one init_time
-            axin.plot(ds.fore_time, 
-                          ds.sel(ensemble=e), label=labelin, color=color, marker=marker)
-        labeled = True
-        
+     
 def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time', 
                     marker=None, init_dot=True, init_dot_label=True, linestyle='-', 
-                    no_init_label=False, linewidth=1.5, fade_out=False):
+                    no_init_label=False, linewidth=1.5, alpha=1, fade_out=False):
     labeled = False
     if init_dot:
         init_label = 'Initialization'
@@ -425,7 +428,11 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
         cmap_c = itertools.cycle(sns.color_palette("GnBu_d", ds.ensemble.size))
     else:
         ccolor = color # Plot all lines with one color
-        
+
+    # Calc valid time if not already present
+    if 'valid_time' not in ds.coords:
+        ds.coords['valid_time'] = ds.init_time + ds.fore_time
+
     for e in ds.ensemble:    
             cds = ds.sel(ensemble=e)
             
@@ -436,7 +443,8 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
                 c_alpha = 0.1 # Starting alpha value (low becasue we plot forward in time)
                 dt_alpha = 1/ds.init_time.size # increment to increase by
             else:
-                c_alpha = 1 # Plot all with 1
+                c_alpha = alpha # Plot all with 1
+                
             for it in ds.init_time:
                 
                 if labeled:
@@ -445,8 +453,8 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
 
                 if color=='cycle_init':
                     ccolor = next(cmap_c)
-                    
-                x = (cds.fore_time + cds.init_time.sel(init_time=it)).values
+
+                x = cds.valid_time.sel(init_time=it).values
                 y = cds.sel(init_time=it).values
                 
                 # Check we have data (issue with some models that change number of ensembles, when xarray merges, missing data is filled in (i.e. ukmo)
@@ -573,13 +581,22 @@ def format_obs_like_model(ds_mod, ds_obs):
     
     return ds_obs_X
 
+def dt64_to_dd(dt64):
+    ''' Converts datetime64[ns] into datetime.datetime'''
+    return dt64.values.astype('M8[D]').astype('O')
+
 def trim_common_times(ds_obs=None, ds_mod=None, freq=None):
     ''' Trim an observed and modeled dataset to common start and end dates (does not
     insure internal times are the same) '''
     
+    if 'valid_time' not in ds_mod.coords:
+        ds_mod.coords['valid_time'] = ds_mod.init_time + ds_mod.fore_time
+    
     # Get earliest and latest times
+    print(ds_mod.valid_time.max().values)
+    print(ds_obs.time.values[-1])
     T_start = np.max([ds_obs.time.values[0], ds_mod.init_time.min().values])
-    T_end = np.min([ds_obs.time.values[-1], (ds_mod.init_time.max() + ds_mod.fore_time.max()).values])
+    T_end = np.min([ds_obs.time.values[-1], (ds_mod.valid_time.max()).values])
 
 
     # Subset Obs
@@ -592,17 +609,24 @@ def trim_common_times(ds_obs=None, ds_mod=None, freq=None):
     ds_mod = ds_mod.where(ds_mod.init_time >= T_start, drop=True)
     
     # AND set to NaN any valid times after T_end (updated)
-    valid_time = ds_mod.init_time + ds_mod.fore_time
+    
     ds_mod_out = ds_mod.where( (ds_mod.init_time >= T_start) & 
-                          (valid_time <= T_end))
+                          (ds_mod.valid_time <= T_end))
                               
     # Expand obs time to have missing until model valid forecasts
-    new_time = pd.date_range(ds_obs_out.time.max().values, valid_time.max().values, freq=freq) # new time we don't have obs yet (future)
+    #print(ds_obs_out.time.max().values)
+    #print(valid_time.max().values)
+    #print(freq)
+    #offset1 = np.timedelta64(40, 'D') # A shift to handel case of monthly data to have extra missing (NaN) obs
+    new_time = pd.date_range(ds_obs_out.time.max().values, ds_mod.valid_time.max().values, freq=freq) # new time we don't have obs yet (future)
     new_obs_time = xr.DataArray(np.ones(new_time.shape)*np.NaN,  dims='time', coords={'time':new_time}) # new dataArray of missing
     ds_obs_out_exp = ds_obs_out.combine_first(new_obs_time) # Merge                         
     T_end = ds_obs_out_exp.time.max().values # new end time
     
-    assert (ds_mod_out.init_time+ds_mod_out.fore_time).max().values <= ds_obs_out_exp.time.max().values, 'Model out contains valid times greater then end'
+    print(ds_mod_out.valid_time.max().values)
+    print(ds_obs_out_exp.time.max().values)
+    
+    assert (ds_mod_out.valid_time).max().values <= ds_obs_out_exp.time.max().values, 'Model out contains valid times greater then end'
 
     print(T_start, T_end)
     assert T_start < T_end, 'Start must be before End!'
@@ -652,59 +676,4 @@ def NRMSE(ds_mod, ds_obs, sigma):
 
 #    PPP = 1 - a / b
 #    return PPP
-
-
-
-
-# Split GFDL grid into "top":bi-pole north and "bottom":rest
-# def split_GFDL(ds_in):
-
-#     # GFDL grid split parameters
-#     j_s = 175
-#     i_s = 180
-
-#     # Top
-#     data_correct = np.r_[ds_in['sic'][j_s:, :i_s], 
-#                          np.flipud(np.fliplr(ds_in['sic'][j_s:, i_s:]))]
-
-#     lon_correct = np.r_[ds_in['lon'][j_s:, :i_s], 
-#                         np.flipud(np.fliplr(ds_in['lon'][j_s:, i_s:]))]
-#     lat_correct = np.r_[ds_in['lat'][j_s:, :i_s], 
-#                         np.flipud(np.fliplr(ds_in['lat'][j_s:, i_s:]))]
-
-#     lon_b_correct = xr.DataArray(np.r_[ds_in['lon_b'][j_s:ds_in.nj.size, :(i_s + 1)], 
-#                         np.flipud(np.fliplr(ds_in['lon_b'][j_s:ds_in.nj_b.size, i_s:]))], dims=('nj_b','ni_b'))
-
-#     lat_b_correct = xr.DataArray(np.r_[ds_in['lat_b'][j_s:ds_in.nj.size, :(i_s + 1)], 
-#                         np.flipud(np.fliplr(ds_in['lat_b'][j_s:ds_in.nj_b.size, i_s:]))], dims=('nj_b','ni_b'))
-
-
-#     ds_top_C = xr.DataArray(data_correct, dims=('nj','ni'), coords={'lat':( ('nj','ni'), lat_correct), 
-#                                                                   'lon':( ('nj','ni'), lon_correct)})
-
-#     ds_top = xr.Dataset(data_vars={'sic':ds_top_C}, coords={'lat_b':lat_b_correct, 'lon_b':lon_b_correct})
-
-#     # Bottom
-
-#     # add overlap
-#     j_s = j_s + 3 # Here we add 3 poleward cells to the "bottom" sub-grid, to allow overlap with "top" sub-grid.
-
-#     data_correct_bottom = ds_in['sic'][:j_s, :]
-
-#     lon_bottom = ds_in['lon'][:j_s, :]
-#     lat_bottom = ds_in['lat'][:j_s, :]
-
-#     lon_b_bottom = ds_in['lon_b'][:j_s+1, :]
-#     lat_b_bottom = ds_in['lat_b'][:j_s+1, :]
-
-#     ds_bottom_C = xr.DataArray(data_correct_bottom, dims=('nj','ni'), coords={'lat':( ('nj','ni'), lat_bottom), 
-#                                                                   'lon':( ('nj','ni'), lon_bottom)})
-
-#     ds_bottom = xr.Dataset(data_vars={'sic':ds_bottom_C}, coords={'lat_b':lat_b_bottom, 'lon_b':lon_b_bottom})
-
-#     return (ds_top, ds_bottom)
-
-
-
-
 
