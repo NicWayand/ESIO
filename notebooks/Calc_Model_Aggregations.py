@@ -110,12 +110,12 @@ def Update_Model_Aggs():
             ds.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
             # Calc panArctic extent
-            da_panE = extent.calc_extent(da=ds.sic, region=ds_region)
+            da_panE = metrics.calc_extent(da=ds.sic, region=ds_region)
             da_panE['nregions'] = 99
             da_panE['region_names'] = 'panArctic'
 
             # Calc Regional extents
-            da_RegE = extent.agg_by_domain(da_grid=ds.sic, ds_region=ds_region)
+            da_RegE = metrics.agg_by_domain(da_grid=ds.sic, ds_region=ds_region)
 
             # Merge
             ds_out = xr.concat([da_panE, da_RegE], dim='nregions')
