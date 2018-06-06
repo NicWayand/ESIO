@@ -43,8 +43,9 @@ import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import ice_plot
 
 # General plotting settings
 sns.set_style('whitegrid')
@@ -88,7 +89,7 @@ lag_time_30days = ctime - np.timedelta64(30, 'D')
 #############################################################
 # Load in Data
 #############################################################
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 # cmap_c = itertools.cycle(sns.color_palette("Set2", len(E.model.keys()) ))
 # markercycler = itertools.cycle(["*","o","s","v","x"])

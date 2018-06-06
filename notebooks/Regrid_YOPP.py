@@ -49,8 +49,9 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # ESIO Imports
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import import_data
 
 
 # In[ ]:
@@ -64,7 +65,7 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 # In[ ]:
 
 
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 # Directories
 model='yopp'
 runType='forecast'
@@ -78,7 +79,7 @@ stero_grid_file = E.obs['NSIDC_0051']['grid']
 # In[ ]:
 
 
-obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
+obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 # Ensure latitude is within bounds (-90 to 90)
 # Have to do this because grid file has 90.000001
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
@@ -169,13 +170,13 @@ for cf in all_files:
     
     # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
     if method=='conservative':
-        regridder = esio.add_matrix_NaNs(regridder)
+        regridder = import_data.add_matrix_NaNs(regridder)
     
     # Regrid variable
     var_out = regridder(ds[cvar])
     
     # Expand dims
-    var_out = esio.expand_to_sipn_dims(var_out)
+    var_out = import_data.expand_to_sipn_dims(var_out)
 
     # # Save regridded to netcdf file
     
@@ -225,7 +226,7 @@ if weights_flag:
 
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # f.set_size_inches((10,10))
 # ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),
@@ -234,7 +235,7 @@ if weights_flag:
 
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # f.set_size_inches((10,10))
 # ds_p2 = sic_all.sic.isel(init_time=1).isel(fore_time=79).isel(ensemble=0)
 # ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 

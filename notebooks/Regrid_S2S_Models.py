@@ -54,8 +54,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import dask
 
 # ESIO Imports
-import esio
-import esiodata as ed
+from esio import EsioData as ed
+from esio import import_data
 
 
 # In[ ]:
@@ -69,7 +69,7 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 # In[ ]:
 
 
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 # Directories
 all_models = [ 'ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
               'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
@@ -84,7 +84,7 @@ stero_grid_file = E.obs['NSIDC_0051']['grid']
 # In[ ]:
 
 
-obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
+obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 # Ensure latitude is within bounds (-90 to 90)
 # Have to do this because grid file has 90.000001
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
@@ -156,7 +156,7 @@ def test_plot():
     plt.title(model)
     
     # Plot SIC on target projection
-    (f, ax1) = esio.polar_axis()
+    (f, ax1) = ice_plot.polar_axis()
     f.set_size_inches((10,10))
     ds_p = ds.sic.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
     ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
@@ -165,7 +165,7 @@ def test_plot():
     ax1.set_title('Orginal Grid')
 
     # Plot SIC on target projection
-    (f, ax1) = esio.polar_axis()
+    (f, ax1) = ice_plot.polar_axis()
     ds_p2 = var_out.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
     ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
                                          transform=ccrs.PlateCarree(),
@@ -239,7 +239,7 @@ for model in all_models:
         # Rename variables per esipn guidelines
         ds.rename(var_dic[model], inplace=True);
         # Rename coords
-        ds = esio.rename_coords(ds)
+        ds = import_data.rename_coords(ds)
 
         # Apply masks (if available)
         if ds_mask:
@@ -274,13 +274,13 @@ for model in all_models:
         # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
         if method=='conservative':
             print('Removing edge cells that contain source NaN cells, should probably check here')
-            regridder = esio.add_matrix_NaNs(regridder)
+            regridder = import_data.add_matrix_NaNs(regridder)
 
         # Regrid variable
         var_out = regridder(ds[cvar])
 
         # Expand dims
-        var_out = esio.expand_to_sipn_dims(var_out)
+        var_out = import_data.expand_to_sipn_dims(var_out)
         
         #test_plot()
 
@@ -308,7 +308,7 @@ for model in all_models:
 
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # f.set_size_inches((10,10))
 # ds_mask.land_mask.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),
@@ -323,21 +323,21 @@ for model in all_models:
 
 
 # # # Plot SIC on target projection
-# # (f, ax1) = esio.polar_axis()
+# # (f, ax1) = ice_plot.polar_axis()
 # # f.set_size_inches((10,10))
 # # ds_mask.land_mask.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 # #                                      transform=ccrs.PlateCarree(),
 # #                                      cmap='Blues')
 
 # # # Plot SIC on target projection
-# # (f, ax1) = esio.polar_axis()
+# # (f, ax1) = ice_plot.polar_axis()
 # # f.set_size_inches((10,10))
 # # mask_out.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 # #                                      transform=ccrs.PlateCarree(),
 # #                                      cmap='Blues')
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # f.set_size_inches((10,10))
 # ds_p = ds.sic.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
 # ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
@@ -346,7 +346,7 @@ for model in all_models:
 # ax1.set_title('Orginal Grid')
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # f.set_size_inches((10,10))
 # ds_p2 = var_out.isel(init_time=0).isel(fore_time=0).isel(ensemble=0)
 # ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
@@ -361,7 +361,7 @@ for model in all_models:
 
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # f.set_size_inches((10,10))
 # (1 - ds_mask.land_mask.where(ds_mask.land_mask<1)).plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),

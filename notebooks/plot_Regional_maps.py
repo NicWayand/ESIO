@@ -44,8 +44,9 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 np.seterr(divide='ignore', invalid='ignore')
 
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import ice_plot
 
 import dask
 dask.set_options(get=dask.threaded.get)
@@ -107,7 +108,7 @@ da_slices = xr.DataArray(slices, dims=('fore_time'))
 #############################################################
 # Load in Data
 #############################################################
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
@@ -193,7 +194,7 @@ for cvar in variables:
                          crExt.ym.min().values, crExt.ym.max().values]
 
                 # New Plot
-                (f, axes) = esio.multi_polar_axis(ncols=Nc, nrows=Nr, 
+                (f, axes) = ice_plot.multi_polar_axis(ncols=Nc, nrows=Nr, 
                                                   Nplots=Nmod, extent=crExt)
                 p = None # initlaize to know if we found any data
                 for (i, cmod) in enumerate(models_2_plot):

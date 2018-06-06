@@ -4,12 +4,27 @@
 # In[1]:
 
 
+'''
+
+This code is part of the SIPN2 project focused on improving sub-seasonal to seasonal predictions of Arctic Sea Ice. 
+If you use this code for a publication or presentation, please cite the reference in the README.md on the
+main page (https://github.com/NicWayand/ESIO). 
+
+Questions or comments should be addressed to nicway@uw.edu
+
+Copyright (c) 2018 Nic Wayand
+
+GNU General Public License v3.0
+
+
+'''
+
 from ecmwfapi import ECMWFDataServer
 import os
 import sys
 import dask
 import numpy as np
-import pygrab
+import download
 import datetime
 
 '''
@@ -264,6 +279,6 @@ for cy in years:
     print(cy)
     for cm in months:
         print(cm)
-        pygrab.download_data_by_month(dataclass='s2s', main_dir=main_dir, mod_dicts=mod_dicts, cy=cy, cm=cm)
+        download.download_data_by_month(dataclass='s2s', main_dir=main_dir, mod_dicts=mod_dicts, cy=cy, cm=cm)
 
 

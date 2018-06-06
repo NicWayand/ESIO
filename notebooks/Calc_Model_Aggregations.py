@@ -49,8 +49,9 @@ import dask
 from dask.distributed import Client
 
 # ESIO Imports
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import metrics
 
 
 # In[ ]:
@@ -58,7 +59,7 @@ import esiodata as ed
 
 def Update_Model_Aggs():
     
-    E = ed.esiodata.load()
+    E = ed.EsioData.load()
     model_dir = E.model_dir
     # Directories
     # Define models to plot
@@ -109,12 +110,12 @@ def Update_Model_Aggs():
             ds.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
             # Calc panArctic extent
-            da_panE = esio.calc_extent(da=ds.sic, region=ds_region)
+            da_panE = extent.calc_extent(da=ds.sic, region=ds_region)
             da_panE['nregions'] = 99
             da_panE['region_names'] = 'panArctic'
 
             # Calc Regional extents
-            da_RegE = esio.agg_by_domain(da_grid=ds.sic, ds_region=ds_region)
+            da_RegE = extent.agg_by_domain(da_grid=ds.sic, ds_region=ds_region)
 
             # Merge
             ds_out = xr.concat([da_panE, da_RegE], dim='nregions')

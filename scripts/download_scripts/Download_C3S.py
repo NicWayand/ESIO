@@ -24,8 +24,9 @@ import os
 import sys
 import dask
 import numpy as np
-import pygrab
 import datetime
+
+from esio import download
 
 '''
 Download models with sea ice forecasts within the c3s forecast data archive.
@@ -119,7 +120,7 @@ for cy in years:
     print(cy)
     for cm in months:
         print(cm)
-        pygrab.download_data_by_month(dataclass='c3', main_dir=main_dir, 
+        download.download_data_by_month(dataclass='c3', main_dir=main_dir, 
                                       mod_dicts=mod_dicts, cy=cy, cm=cm)
 
 

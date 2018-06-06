@@ -2,7 +2,17 @@ notebooks/.ipynb_checkpoints*
 *.pyc
 .ipynb_checkpoints/
 notebooks/old
+notebooks/untracked
 scripts/download_scripts/pyconvert.sh
 scripts/download_scripts/strip_magic.py
 test_scripts/
 scripts/scheduler/
+scripts/old/
+.idea/
+esio.egg-info/
+notebooks/.directory
+scripts/path_file.sh
+update_requirements_files.sh
+notebooks/dask-worker-space
+notebooks/ESIO_DATA.pkl
+

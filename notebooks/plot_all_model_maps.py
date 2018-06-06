@@ -44,8 +44,9 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 np.seterr(divide='ignore', invalid='ignore')
 
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import ice_plot
 
 import dask
 dask.set_options(get=dask.threaded.get)
@@ -110,7 +111,7 @@ da_slices = xr.DataArray(slices, dims=('fore_time'))
 #############################################################
 # Load in Data
 #############################################################
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 # Get median ice edge by DOY
 median_ice_fill = xr.open_mfdataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'ice_edge.nc')).sic
@@ -209,7 +210,7 @@ for cvar in variables:
 
                 MME_list = []            
                 # New Plot
-                (f, axes) = esio.multi_polar_axis(ncols=Nc, nrows=Nr, Nplots=Nmod)
+                (f, axes) = ice_plot.multi_polar_axis(ncols=Nc, nrows=Nr, Nplots=Nmod)
                 
                 # Plot Obs (if available)
                 ax_num = 0

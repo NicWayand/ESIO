@@ -28,8 +28,8 @@ import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
 
 # General plotting settings
 sns.set_style('whitegrid')
@@ -47,7 +47,7 @@ for model in models_all:
     #############################################################
     # Load in Data
     #############################################################
-    E = ed.esiodata.load()
+    E = ed.EsioData.load()
     # Directories
     model_label = E.model[model]['model_label']
     model_grid_file = E.model[model]['grid']
@@ -79,7 +79,7 @@ for model in models_all:
     # Plot pan-Arctic sea ice extent
     f = plt.figure(figsize=(10,5))
     ax1 = plt.subplot(1, 1, 1) # Observations
-    esio.plot_reforecast(ds=mod_avg, axin=ax1, labelin=model_label, color='cycle_ensemble', marker=None)
+    ice_plot.plot_reforecast(ds=mod_avg, axin=ax1, labelin=model_label, color='cycle_ensemble', marker=None)
     ax1.set_ylabel('Millions of square km')
     plt.legend(loc='lower right') #bbox_to_anchor=(1.03, 1.05)
     f.autofmt_xdate()
@@ -94,7 +94,7 @@ for model in models_all:
     ax1 = plt.subplot(1, 1, 1)
     for cd in mod_reg.nregions:
         print(cd.region_names.values)
-        esio.plot_reforecast(ds= mod_reg.sel(nregions=cd), 
+        ice_plot.plot_reforecast(ds= mod_reg.sel(nregions=cd),
                              linestyle=next(linecycler),
                              color=next(cmap_reg),
                              axin=ax1, 
@@ -123,7 +123,7 @@ for model in models_all:
 
     for (k, FT) in enumerate(ds_model.fore_time):
 
-        (f, ax1) = esio.polar_axis()
+        (f, ax1) = ice_plot.polar_axis()
         f.set_size_inches(10, 5)
 
         init_time =  pd.to_datetime( c_da.init_time.values).strftime('%Y-%m-%d-%H:%M')

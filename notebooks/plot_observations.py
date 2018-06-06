@@ -42,8 +42,10 @@ import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import ice_plot
+from esio import metrics
 
 # General plotting settings
 sns.set_style('whitegrid')
@@ -63,7 +65,7 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
 
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 # Load in Obs
 data_dir = E.data_dir
@@ -108,7 +110,7 @@ da_81 = ds_81.sic
 
 
 # Get regional averages
-da_81reg = esio.agg_by_domain(da_grid=da_81, ds_region=ds_region)
+da_81reg = metrics.agg_by_domain(da_grid=da_81, ds_region=ds_region)
 
 
 # In[7]:
@@ -118,17 +120,17 @@ da_81reg = esio.agg_by_domain(da_grid=da_81, ds_region=ds_region)
 ctime = np.datetime64(datetime.datetime.now())
 lag_time_30days = ctime - np.timedelta64(30, 'D')
 lag_time_90days = ctime - np.timedelta64(90, 'D')
-last_sept = esio.get_season_start_date(ctime)
+last_sept = metrics.get_season_start_date(ctime)
 
 # Select recent period
 da_81_30 = da_81.where(da_81.time >= lag_time_30days, drop=True)
 # Aggregate over domain
-da_81_30_avg = esio.calc_extent(da_81_30, ds_region, fill_pole_hole=True)
+da_81_30_avg = metrics.calc_extent(da_81_30, ds_region, fill_pole_hole=True)
 
 # Select recent period
 da_81_3m = da_81.where(da_81.time >= lag_time_90days, drop=True)
 # Aggregate over domain
-da_81_3m_avg = esio.calc_extent(da_81_3m, ds_region, fill_pole_hole=True)
+da_81_3m_avg = metrics.calc_extent(da_81_3m, ds_region, fill_pole_hole=True)
 
 
 # In[8]:
@@ -164,7 +166,7 @@ linecycler = itertools.cycle(["-","--","-.",":","--"])
 # Mask out other areas to missing
 mask_plot = ds_region.where(ds_region.mask.isin(ds_region.ocean_regions))
 
-(f, ax1) = esio.polar_axis()
+(f, ax1) = ice_plot.polar_axis()
 f.set_size_inches(10, 5)
 p = mask_plot.mask.plot(ax=ax1,  x='lon', y='lat', 
                      transform=ccrs.PlateCarree(),
@@ -251,7 +253,7 @@ cmap_diff_2.set_bad(color = 'lightgrey')
 
 
 # Plot Obs and model SIC for date
-(f, ax1) = esio.polar_axis()
+(f, ax1) = ice_plot.polar_axis()
 f.set_size_inches(10, 5)
 # Obs NSIDC 0051
 obs1 = da_81.sel(time=ctime, method='nearest')
@@ -265,7 +267,7 @@ f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map.png'),bbox_inches='tig
 
 
 
-(f, ax1) = esio.polar_axis()
+(f, ax1) = ice_plot.polar_axis()
 f.set_size_inches(10, 5)
 # Obs NSIDC 0051
 obs1 = da_81.sel(time=ctime, method='nearest')
@@ -281,7 +283,7 @@ f.savefig(os.path.join(fig_dir,'panArcticSIC_SIC_anomaly.png'),bbox_inches='tigh
 
 # Plot obs change from yesterday
 # Plot Obs and model SIC for date
-(f, ax1) = esio.polar_axis()
+(f, ax1) = ice_plot.polar_axis()
 f.set_size_inches(10, 5)
 obs1 = da_81.sel(time=ctime, method='nearest')
 ctime_m1 = obs1.time.values - np.timedelta64(14, 'D')
@@ -297,7 +299,7 @@ f.savefig(os.path.join(fig_dir,'panArcticSIC_Forecast_Map_2Week_Change.png'),bbo
 
 
 # Plot obs change from last week
-(f, ax1) = esio.polar_axis()
+(f, ax1) = ice_plot.polar_axis()
 f.set_size_inches(10, 5)
 obs1 = da_81.sel(time=ctime, method='nearest')
 ctime_m1 = obs1.time.values - np.timedelta64(7, 'D')

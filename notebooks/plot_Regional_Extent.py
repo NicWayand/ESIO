@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -44,15 +44,17 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 np.seterr(divide='ignore', invalid='ignore')
 
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import ice_plot
+from esio import metrics
 
 # General plotting settings
 sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[2]:
 
 
 # Plotting Info
@@ -61,7 +63,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[ ]:
+# In[3]:
 
 
 # Initialization times to plot
@@ -73,7 +75,7 @@ SD = cd - datetime.timedelta(days=90)
 # ED = cd + datetime.timedelta(days=365)
 
 
-# In[ ]:
+# In[4]:
 
 
 # Info about models runs
@@ -83,16 +85,16 @@ SD = cd - datetime.timedelta(days=90)
 # biasCorrected = 
 
 
-# In[ ]:
+# In[5]:
 
 
 #############################################################
 # Load in Data
 #############################################################
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 
-# In[ ]:
+# In[6]:
 
 
 # Load obs
@@ -102,7 +104,7 @@ ds_obs = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='t
 print(timeit.default_timer() - start_time)
 
 
-# In[ ]:
+# In[7]:
 
 
 # Load in regional data
@@ -110,7 +112,7 @@ print(timeit.default_timer() - start_time)
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[ ]:
+# In[8]:
 
 
 cdate = datetime.datetime.now()
@@ -178,7 +180,7 @@ for cvar in variables:
             import timeit
             start_time = timeit.default_timer()
             
-            esio.plot_reforecast(ds=ds_model, axin=ax1, 
+            ice_plot.plot_reforecast(ds=ds_model, axin=ax1, 
                                  labelin=E.model[cmod]['model_label'],
                                  color=cc, marker=None,
                                  linestyle=cl,

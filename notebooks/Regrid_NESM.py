@@ -40,8 +40,9 @@ import datetime
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # ESIO Imports
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import import_data
 
 
 # In[2]:
@@ -55,7 +56,7 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 # In[3]:
 
 
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 # Directories
 all_models=['usnavyncep','usnavysipn']
 runType='forecast'
@@ -66,7 +67,7 @@ updateall = False
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
-obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
+obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 # Ensure latitude is within bounds (-90 to 90)
 # Have to do this because grid file has 90.000001
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
@@ -167,7 +168,7 @@ for model in all_models:
 
         # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
         if method=='conservative':
-            regridder = esio.add_matrix_NaNs(regridder)
+            regridder = import_data.add_matrix_NaNs(regridder)
 
         # Regrid variables
 
@@ -177,7 +178,7 @@ for model in all_models:
         ds_out = xr.merge(var_list)
 
         # Expand dims
-        ds_out = esio.expand_to_sipn_dims(ds_out)
+        ds_out = import_data.expand_to_sipn_dims(ds_out)
 
         # # Save regridded to netcdf file
 
@@ -222,7 +223,7 @@ if weights_flag:
 # ax1.coastlines(linewidth=0.75, color='black', resolution='50m');
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # ds_p2 = sic_all.sic.isel(init_time=0).isel(fore_time=79).isel(ensemble=0)
 # ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),

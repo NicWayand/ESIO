@@ -38,8 +38,7 @@ import pandas as pd
 from dateutil.relativedelta import relativedelta
 
 # ESIO Imports
-import esio
-import esiodata as ed
+from esio import EsioData as ed
 
 import dask
 
@@ -53,13 +52,13 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 #############################################################
 # Load in Data
 #############################################################
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 data_dir = E.data_dir
 grid_dir = E.grid_dir
 fig_dir = os.path.join(E.fig_dir, 'model', 'extent_test')
 
 
-# In[2]:
+# In[3]:
 
 
 runType = 'reforecast'
@@ -68,7 +67,7 @@ cvar = variables[0]
 test_plots = False
 
 
-# In[3]:
+# In[4]:
 
 
 # Define models
@@ -79,14 +78,14 @@ models_2_process = ['gfdlsipn']
 models_2_process
 
 
-# In[4]:
+# In[ ]:
 
 
 # c = Client()
 # c
 
 
-# In[5]:
+# In[ ]:
 
 
 # Load in Obs
@@ -96,13 +95,13 @@ da_obs_in = xr.open_mfdataset(E.obs[obs_source]['sipn_nc']+'_yearly/*.nc', conca
                              chunks={'time':1, 'x': 304, 'y': 448})
 
 
-# In[6]:
+# In[ ]:
 
 
 ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[7]:
+# In[ ]:
 
 
 # from dask.distributed import Client, progress
@@ -110,7 +109,7 @@ ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'
 # client
 
 
-# In[8]:
+# In[ ]:
 
 
 for (i, c_model) in enumerate(models_2_process):
@@ -144,7 +143,7 @@ for (i, c_model) in enumerate(models_2_process):
         c_label = 'Sea Ice Concentration (-)'
         c_vmin = 0
         c_vmax = 1
-        (f, axes) = esio.multi_polar_axis(ncols=2, nrows=1, Nplots=3, sizefcter=3)
+        (f, axes) = ice_plot.multi_polar_axis(ncols=2, nrows=1, Nplots=3, sizefcter=3)
         datemp = da_mod_in.isel(ensemble=0).isel(init_time=60).isel(fore_time=1)
         p = datemp.plot.pcolormesh(ax=axes[0], x='lon', y='lat', 
                                               transform=ccrs.PlateCarree(),
@@ -177,7 +176,7 @@ for (i, c_model) in enumerate(models_2_process):
         c_label = 'Sea Ice Concentration (-)'
         c_vmin = 0
         c_vmax = 1
-        (f, axes) = esio.multi_polar_axis(ncols=2, nrows=1, Nplots=3, sizefcter=3)
+        (f, axes) = ice_plot.multi_polar_axis(ncols=2, nrows=1, Nplots=3, sizefcter=3)
         datemp = da_mod.sic.isel(ensemble=0).isel(init_time=60).isel(fore_time=1)
         p = datemp.plot.pcolormesh(ax=axes[0], x='lon', y='lat', 
                                               transform=ccrs.PlateCarree(),
@@ -376,7 +375,7 @@ for (i, c_model) in enumerate(models_2_process):
 # # Plot pan-Arctic sea ice extent
 # f = plt.figure(figsize=(10,5))
 # ax1 = plt.subplot(1, 1, 1) # Observations
-# esio.plot_reforecast(ds=ds_mrg.sel(ensemble=slice(0,ds_mrg.ensemble.size)).sic, axin=ax1, labelin=ds_model.model_label,
+# ice_plot.plot_reforecast(ds=ds_mrg.sel(ensemble=slice(0,ds_mrg.ensemble.size)).sic, axin=ax1, labelin=ds_model.model_label,
 #                      color='cycle_ensemble', marker=None)
 # ds_obs_trim.plot(label='NSIDC NRT', color='k')
 # # ds_ext.Extent.plot(label='NSIDC V3', color='m')

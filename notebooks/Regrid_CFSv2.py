@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -40,11 +40,12 @@ import datetime
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # ESIO Imports
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import import_data
 
 
-# In[ ]:
+# In[2]:
 
 
 # General plotting settings
@@ -52,34 +53,34 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[3]:
 
 
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 # Directories
 all_models=['noaasipn']
 runType='forecast'
 updateall = False
 
 
-# In[ ]:
+# In[4]:
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
-obs_grid = esio.load_grid_info(stero_grid_file, model='NSIDC')
+obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 # Ensure latitude is within bounds (-90 to 90)
 # Have to do this because grid file has 90.000001
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[ ]:
+# In[5]:
 
 
 # Regridding Options
 method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[ ]:
+# In[6]:
 
 
 ## TODO
@@ -87,20 +88,20 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # - Get lat lon bounds 
 
 
-# In[ ]:
+# In[7]:
 
 
 var_dic = {'time':'valid_time','ens':'ensemble'}
 
 
-# In[ ]:
+# In[8]:
 
 
 # Option to shift time stamp from begining of month to end
 monthly_in = {'noaasipn':True}
 
 
-# In[ ]:
+# In[9]:
 
 
 for model in all_models:
@@ -177,7 +178,7 @@ for model in all_models:
 
         # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
         if method=='conservative':
-            regridder = esio.add_matrix_NaNs(regridder)
+            regridder = import_data.add_matrix_NaNs(regridder)
 
         # Regrid variables
         var_list = []
@@ -186,7 +187,7 @@ for model in all_models:
         ds_out = xr.merge(var_list)
 
         # Expand dims
-        ds_out = esio.expand_to_sipn_dims(ds_out)
+        ds_out = import_data.expand_to_sipn_dims(ds_out)
 
         # # Save regridded to netcdf file
         ds_out.to_netcdf(f_out)
@@ -195,7 +196,7 @@ for model in all_models:
         print('Saved ', f_out)
 
 
-# In[ ]:
+# In[10]:
 
 
 # Clean up
@@ -205,7 +206,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[ ]:
+# In[11]:
 
 
 # sic_all = xr.open_mfdataset(f_out)
@@ -231,14 +232,14 @@ if weights_flag:
 # ax1.coastlines(linewidth=0.75, color='black', resolution='50m');
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # ds_p.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),
 #                                      cmap=cmap_sic)
 # ax1.set_title('Original Grid')
 
 # # Plot SIC on target projection
-# (f, ax1) = esio.polar_axis()
+# (f, ax1) = ice_plot.polar_axis()
 # ds_p2 = sic_all.sic.isel(init_time=0).isel(fore_time=8).isel(ensemble=0)
 # ds_p2.plot.pcolormesh(ax=ax1, x='lon', y='lat', 
 #                                      transform=ccrs.PlateCarree(),
