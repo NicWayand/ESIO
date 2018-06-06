@@ -24,12 +24,13 @@ import numpy.ma as ma
 import os
 import xarray as xr
 import glob
-import loadobservations as lo
-import esio
-import esiodata as ed
+# import loadobservations as lo
+from esio import import_data
+from esio import metrics
+from esio import EsioData as ed
 
 # Dirs
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 data_dir = E.obs_dir
 
 # Flags
@@ -42,7 +43,7 @@ ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 # Products to import
 product_list = ['NSIDC_0081', 'NSIDC_0051', 'NSIDC_0079']
 
-ds_lat_lon = esio.get_stero_N_grid(grid_dir=E.grid_dir)
+ds_lat_lon = import_data.get_stero_N_grid(grid_dir=E.grid_dir)
 
 # Loop through each product
 for c_product in product_list:
@@ -67,7 +68,7 @@ for c_product in product_list:
     for nf in new_files:
         
         # Load in 
-        ds_sic = lo.load_1_NSIDC(filein=os.path.join(native_dir, nf+'.bin'), product=c_product)
+        ds_sic = import_data.load_1_NSIDC(filein=os.path.join(native_dir, nf+'.bin'), product=c_product)
 
         # Add lat and lon dimensions
         ds_sic.coords['lat'] = ds_lat_lon.lat
@@ -82,7 +83,7 @@ for c_product in product_list:
         
         # Calculate extent and area
 #         ds_sic['extent'] = ((ds_sic.sic>=0.15).astype('int') * ds_region.area).sum(dim='x').sum(dim='y')/(10**6)
-        ds_sic['extent'] = esio.calc_extent(ds_sic.sic, ds_region, fill_pole_hole=True)
+        ds_sic['extent'] = metrics.calc_extent(ds_sic.sic, ds_region, fill_pole_hole=True)
 #         ds_sic['extent'] = ds_sic['extent'] + (ds_sic.hole_mask.astype('int') * ds_region.area).sum(dim='x').sum(dim='y')/(10**6) # Add hole
         ds_sic['area'] = (ds_sic.sic * ds_region.area).sum(dim='x').sum(dim='y')/(10**6) # No pole hole
     

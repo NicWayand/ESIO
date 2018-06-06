@@ -21,8 +21,8 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 
 # ESIO Imports
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
 
 
 # In[4]:
@@ -50,7 +50,7 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 # Load in Data
 #############################################################
 
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 # Load in Obs
 data_dir = E.data_dir

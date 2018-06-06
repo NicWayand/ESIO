@@ -25,13 +25,13 @@ import xarray as xr
 import pandas as pd
 
 # ESIO Imports
-import esiodata as ed
+from esio import EsioData as ed
 
 
 # In[2]:
 
 
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 file_in = os.path.join(E.obs['NSIDC_extent']['native'], 'N_seaice_extent_daily_v3.0.csv')
 file_out = os.path.join(E.obs['NSIDC_extent']['sipn_nc'], 'N_seaice_extent_daily_v3.0.nc')

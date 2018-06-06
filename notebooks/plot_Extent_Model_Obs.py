@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -44,15 +44,16 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import seaborn as sns
 np.seterr(divide='ignore', invalid='ignore')
 
-import esio
-import esiodata as ed
+
+from esio import EsioData as ed
+from esio import ice_plot
 
 # General plotting settings
 sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 # Plotting Info
@@ -61,7 +62,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[3]:
+# In[ ]:
 
 
 # Initialization times to plot
@@ -71,7 +72,7 @@ SD = cd - datetime.timedelta(days=90)
 ED = cd + datetime.timedelta(days=365)
 
 
-# In[4]:
+# In[ ]:
 
 
 # Models not to plot
@@ -84,16 +85,16 @@ no_plot = ['rasmesrl']
 
 
 
-# In[5]:
+# In[ ]:
 
 
 #############################################################
 # Load in Data
 #############################################################
-E = ed.esiodata.load()
+E = ed.EsioData.load()
 
 
-# In[6]:
+# In[ ]:
 
 
 
@@ -110,14 +111,14 @@ ds_ext = xr.open_dataset(os.path.join(E.obs['NSIDC_extent']['sipn_nc'], 'N_seaic
 ds_ext = ds_ext.rename({'datetime':'time'})
 
 
-# In[7]:
+# In[ ]:
 
 
 # Combine extent obs using highest quality first
 ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first(da_81)
 
 
-# In[8]:
+# In[ ]:
 
 
 # Load in regional data
@@ -125,13 +126,13 @@ ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[9]:
+# In[ ]:
 
 
 cdate = datetime.datetime.now()
 
 
-# In[10]:
+# In[ ]:
 
 
 ds_per = ds_obs.sel(time=slice('1980','2010'))
@@ -155,7 +156,7 @@ ds_per_std = xr.concat([ds_per_std,ds_per_std_2], dim='time')
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[11]:
+# In[ ]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))
@@ -212,7 +213,7 @@ for cvar in variables:
         start_time = timeit.default_timer()
         #ds_model.load()
 #         print(ds_model)
-        esio.plot_reforecast(ds=ds_model, axin=ax1, 
+        ice_plot.plot_reforecast(ds=ds_model, axin=ax1, 
                              labelin=E.model[cmod]['model_label'],
                              color=cc, marker=None,
                              linestyle=cl,
@@ -270,7 +271,7 @@ for cvar in variables:
 
 # # Plot raw extents
 
-# In[12]:
+# In[ ]:
 
 
 for cvar in variables:
@@ -323,7 +324,7 @@ for cvar in variables:
         start_time = timeit.default_timer()
         #ds_model.load()
 #         print(ds_model)
-        esio.plot_reforecast(ds=ds_model, axin=ax1, 
+        ice_plot.plot_reforecast(ds=ds_model, axin=ax1, 
                              labelin=E.model[cmod]['model_label'],
                              color=cc, marker=None,
                              linestyle=cl,
@@ -360,38 +361,5 @@ for cvar in variables:
     f_out = os.path.join(fig_dir,'panArctic_'+metric1+'_'+runType+'_raw_all.png')
     f.savefig(f_out,bbox_inches='tight',dpi=200)
 #     mpld3.save_html(f, os.path.join(fig_dir,'panArctic_'+metric1+'_'+runType+'_raw_all.html'))
-
-
-# In[13]:
-
-
-# Testing memory usage
-
-# i=0
-# cmod ='ukmetofficesipn'
-
-# # Load in Model
-# model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc'], '*.nc')
-
-# # Check we have files 
-# files = glob.glob(model_forecast)
-
-# ds_model = xr.open_mfdataset(model_forecast, chunks={'ensemble': 1, 'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448})
-# ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
-# ds_model
-
-
-
-# cvar = 'sic'
-# ds_model = ds_model[cvar]
-
-# f = plt.figure(figsize=(15,10))
-# ax1 = plt.subplot(1, 1, 1) # Observations
-# esio.plot_reforecast(ds=ds_model, ds_region=ds_region,
-#                      axin=ax1, 
-#                      labelin=E.model[cmod]['model_label'],
-#                      color='r', marker=None,
-#                      linestyle=next(linecycler),
-#                      no_init_label=False)
 
 
