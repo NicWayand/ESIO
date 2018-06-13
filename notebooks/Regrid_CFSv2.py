@@ -140,7 +140,7 @@ for model in all_models:
         if not updateall:
             # TODO: Test if the file is openable (not corrupted)
             if os.path.isfile(f_out):
-                print("Skipping ", os.path.basename(all_files[0]), " already imported.")
+                print("Skipping ", os.path.basename(cf), " already imported.")
                 continue # Skip, file already imported
 
         ds = xr.open_mfdataset(cf)

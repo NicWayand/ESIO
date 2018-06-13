@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -47,13 +47,14 @@ np.seterr(divide='ignore', invalid='ignore')
 
 from esio import EsioData as ed
 from esio import ice_plot
+from esio import import_data
 
 # General plotting settings
 sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[2]:
 
 
 # Plotting Info
@@ -62,7 +63,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[ ]:
+# In[3]:
 
 
 # Initialization times to plot
@@ -72,7 +73,7 @@ SD = cd - datetime.timedelta(days=90)
 ED = cd + datetime.timedelta(days=365)
 
 
-# In[ ]:
+# In[4]:
 
 
 # Models not to plot
@@ -85,7 +86,7 @@ no_plot = ['rasmesrl']
 
 
 
-# In[ ]:
+# In[5]:
 
 
 #############################################################
@@ -94,7 +95,7 @@ no_plot = ['rasmesrl']
 E = ed.EsioData.load()
 
 
-# In[ ]:
+# In[6]:
 
 
 
@@ -111,14 +112,14 @@ ds_ext = xr.open_dataset(os.path.join(E.obs['NSIDC_extent']['sipn_nc'], 'N_seaic
 ds_ext = ds_ext.rename({'datetime':'time'})
 
 
-# In[ ]:
+# In[7]:
 
 
 # Combine extent obs using highest quality first
 ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first(da_81)
 
 
-# In[ ]:
+# In[8]:
 
 
 # Load in regional data
@@ -126,13 +127,13 @@ ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[ ]:
+# In[9]:
 
 
 cdate = datetime.datetime.now()
 
 
-# In[ ]:
+# In[10]:
 
 
 ds_per = ds_obs.sel(time=slice('1980','2010'))
@@ -156,7 +157,7 @@ ds_per_std = xr.concat([ds_per_std,ds_per_std_2], dim='time')
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[ ]:
+# In[11]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))
@@ -171,7 +172,7 @@ for cvar in variables:
     f = plt.figure(figsize=(15,10))
     ax1 = plt.subplot(1, 1, 1) # Observations
     
-#     for (i, cmod) in enumerate(['yopp']):
+#     for (i, cmod) in enumerate(['uclsipn']):
     for (i, cmod) in enumerate(E.model.keys()):
         if cmod in no_plot:
             continue
@@ -213,6 +214,7 @@ for cvar in variables:
         start_time = timeit.default_timer()
         #ds_model.load()
 #         print(ds_model)
+#         xr.exit()
         ice_plot.plot_reforecast(ds=ds_model, axin=ax1, 
                              labelin=E.model[cmod]['model_label'],
                              color=cc, marker=None,
@@ -224,7 +226,7 @@ for cvar in variables:
         # Memory clean up
         ds_model = None
         
-        
+       
     # Hack plot of models that only provide bias corrected SIE
     model= 'noaasipn'
     data_dir = os.path.join('/home/disk/sipn/upload/', model, runType)
@@ -271,7 +273,7 @@ for cvar in variables:
 
 # # Plot raw extents
 
-# In[ ]:
+# In[12]:
 
 
 for cvar in variables:
@@ -359,7 +361,7 @@ for cvar in variables:
         
     # Save to file
     f_out = os.path.join(fig_dir,'panArctic_'+metric1+'_'+runType+'_raw_all.png')
-    f.savefig(f_out,bbox_inches='tight',dpi=200)
+    f.savefig(f_out, bbox_inches='tight',dpi=200)
 #     mpld3.save_html(f, os.path.join(fig_dir,'panArctic_'+metric1+'_'+runType+'_raw_all.html'))
 
 

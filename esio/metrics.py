@@ -89,13 +89,14 @@ def get_median_ice_edge(ds, ystart='1981', yend='2012', sic_threshold=0.15):
 
 
 def calc_IFD(da, sic_threshold=0.15):
-    ''' Calc the Ice Free Day (frist) by Calender Year '''
+    ''' Calc the Ice Free Day (first) by Calender Year. '''
     ifd = (da < sic_threshold).reduce(np.argmax, dim='time') # Find index of first ice free
     ifd = ifd.where(da.isel(time=0).notnull()) # Apply Orig mask
     return ifd
 
 
 def nanSum(da=None, dim=None):
+    ''' Return nan sum for pixels where we have atleast 1 NaN value. '''
     return da.sum(dim=dim).where(da.notnull().sum(dim=dim) > 0 )
 
 

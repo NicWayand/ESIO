@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -20,7 +20,7 @@ GNU General Public License v3.0
 '''
 
 
-# In[ ]:
+# In[2]:
 
 
 # Standard Imports
@@ -54,7 +54,7 @@ from esio import EsioData as ed
 from esio import metrics
 
 
-# In[ ]:
+# In[3]:
 
 
 def Update_Model_Aggs():
@@ -65,7 +65,7 @@ def Update_Model_Aggs():
     # Define models to plot
     all_models = list(E.model.keys())
     all_models = [x for x in all_models if x not in ['piomas','MME']] # remove some models
-    # all_models = ['noaasipn']
+#     all_models = ['uclsipn']
     runType='forecast'
     updateall = False
 
@@ -106,7 +106,7 @@ def Update_Model_Aggs():
                     continue # Skip, file already imported
 
             ds = xr.open_mfdataset(cf , chunks={'fore_time':10, 'ensemble': 5, 'init_time': 10, 'nj': 304, 'ni': 448},
-                                  parallel=True) # Works but is not iffecent 5-15 mins wall time
+                                  parallel=True) # Works but is not eiffecent 5-15 mins wall time
             ds.rename({'nj':'x', 'ni':'y'}, inplace=True)
 
             # Calc panArctic extent
@@ -135,7 +135,7 @@ def Update_Model_Aggs():
         print("Finished...")
 
 
-# In[ ]:
+# In[4]:
 
 
 if __name__ == '__main__':

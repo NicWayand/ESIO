@@ -4,6 +4,7 @@ import numpy as np
 import seaborn as sns
 from cartopy import crs as ccrs
 from matplotlib import pyplot as plt
+from . import import_data
 
 
 def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
@@ -26,7 +27,7 @@ def plot_reforecast(ds=None, axin=None, labelin=None, color='cycle_init_time',
 
     # Calc valid time if not already present
     if 'valid_time' not in ds.coords:
-        ds.coords['valid_time'] = ds.init_time + ds.fore_time
+        ds = import_data.get_valid_time(ds) # ds.init_time + ds.fore_time
 
     for e in ds.ensemble:
             cds = ds.sel(ensemble=e)

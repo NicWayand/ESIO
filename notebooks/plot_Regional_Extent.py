@@ -120,7 +120,7 @@ cdate = datetime.datetime.now()
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[ ]:
+# In[9]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))
@@ -154,7 +154,8 @@ for cvar in variables:
             if not files:
                 #print("Skipping model", cmod, "no forecast files found.")
                 continue # Skip this model
-            ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
+            ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time',
+                                         autoclose=True)
 
             # Get Extent
             ds_model = ds_model.Extent

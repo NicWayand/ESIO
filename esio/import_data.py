@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import scipy
 import xarray as xr
+from dateutil.relativedelta import relativedelta
 
 
 def preprocess_time_monthly(x):
@@ -41,6 +42,34 @@ def preprocess_time_monthly(x):
 
     return x
 
+def preprocess_time_monthly_Cansips(x):
+    ''' Preprocesses time variables from Cansips format to SIPN2 format.
+
+    Convert time to initialization and forecast lead time (to fit into orthogonal matrices)
+    Input Dims: lat x lon x Time
+    Output Dims: lat x lon x init_time x fore_time
+
+    Where we represent fore_time as monthly increments
+
+    '''
+
+    Nmons = x.leadtime.size
+    m_i = np.arange(0,Nmons)
+    m_dt = ['month' for x in m_i] # list of 'month'
+
+    # Set init_time
+    x.coords['init_time'] = x.reftime.isel(time=0)
+    x.coords['init_time'].attrs['comments'] = 'Initilzation time of forecast'
+    x = x.drop(['reftime','leadtime'])
+
+    # Get forecast time (as timedeltas from init_time)
+    x.rename({'time':'fore_time'}, inplace=True);
+    x.coords['fore_time'] = xr.DataArray(m_i, dims='fore_time')
+
+    # Set time offset for index in fore_time
+    x.coords['fore_offset'] = xr.DataArray(m_dt, dims='fore_time', coords={'fore_time':x.fore_time})
+    
+    return x
 
 def preprocess_time(x):
     ''' Convert time to initialization and foreast lead time (to fit into orthoganal matrices)
@@ -62,6 +91,21 @@ def preprocess_time(x):
     x.coords['fore_time'] = xtimes - xtimes[0]
 
     return x
+
+def get_valid_time(ds):
+    ''' Given a data set with init_time and fore_time coords, calcuate the valid_time coord.'''
+    
+    if 'fore_offset' in ds.coords:
+        # Then fore_time is just an index for fore_offset (i.e. monthly data)
+        # TODO remove hard corded months (get from fore_offset)
+        fore_time_offset = np.array([relativedelta(months=+x) for x in ds.fore_time.values])
+        # Switch types around so we can add datetime64[ns] with an object of relativedelta, then convert back
+        valid_time = xr.DataArray(ds.init_time.values.astype('M8[D]').astype('O'), dims='init_time') +  xr.DataArray(fore_time_offset, dims='fore_time')
+        ds.coords['valid_time'] = valid_time.astype('datetime64[ns]')
+    else:
+        ds.coords['valid_time'] = ds.init_time + ds.fore_time
+        
+    return ds
 
 
 def rename_coords(ds):
@@ -101,6 +145,9 @@ def open_1_member(cfiles, e):
     # Sort init_time (if more than one)
     if ds.init_time.size>1:
         ds = ds.reindex(init_time=sorted(ds.init_time.values))
+        
+    # Some of daily gfdl flor forecast go for 10 years instead of 1, only get 1 year here
+    ds = ds.isel(fore_time=slice(0,365))
 
     # Add ensemble coord
     ds.coords['ensemble'] = e
