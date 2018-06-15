@@ -88,10 +88,36 @@ def get_median_ice_edge(ds, ystart='1981', yend='2012', sic_threshold=0.15):
     return median_ice_fill
 
 
-def calc_IFD(da, sic_threshold=0.15):
+def calc_IFD(da, sic_threshold=0.15, DOY_s=1, time_dim='time'):
     ''' Calc the Ice Free Day (first) by Calender Year. '''
+    da = da.rename({time_dim:'time'})
     ifd = (da < sic_threshold).reduce(np.argmax, dim='time') # Find index of first ice free
     ifd = ifd.where(da.isel(time=0).notnull()) # Apply Orig mask
+    # Convert to Day of Year by adding the first time
+    ifd = ifd + DOY_s
+    return ifd
+
+def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10):
+    ''' Calc the Ice Free Day (first) by Calender Year. 
+    Finds first day 
+    '''
+    da = da.rename({time_dim:'time'})
+
+    # Here we find pixels WITHOUT (<sic_threshold) Ice!!!
+    sip_Xday = (da < sic_threshold).rolling(min_periods=1, center=False, time=Nday).sum().where(da.isel(time=0).notnull()) 
+
+    # Now values range from 0 to Nday, keep only Nday pixel values, rescale them to 1 (end up with 0 with ice and 1 with ocean over past 10 days)
+    sip_Xday_adj = sip_Xday.where(sip_Xday == Nday, other=0).where(da.isel(time=0).notnull())
+    sip_Xday_adj = sip_Xday_adj.astype('float') / Nday
+
+    # Now reduce over time dime, and find the first "1" value for each pixel (which is the last day of ice presence, with at least 10 days following ice free)
+    ifd = sip_Xday_adj.reduce(np.argmax, dim='time') # Find index of first ice free
+    
+    # Apply Orig mask
+    ifd = ifd.where(da.isel(time=0).notnull()) 
+    # Convert to Day of Year by adding the first time
+    ifd = ifd + DOY_s - Nday # Add DOY_s and subtract the Nday window (rolling returns the right side label "trailing")
+
     return ifd
 
 

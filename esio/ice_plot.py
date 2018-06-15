@@ -139,11 +139,11 @@ def polar_axis():
 
 def multi_polar_axis(ncols=4, nrows=4,
                      Nplots=None, sizefcter=1,
-                     extent=None):
+                     extent=None, central_longitude=-45):
     if not Nplots:
         Nplots = ncols*nrows
     # Create a grid of plots
-    f, (axes) = plt.subplots(ncols=ncols, nrows=nrows, subplot_kw={'projection': ccrs.NorthPolarStereo(central_longitude=-45)})
+    f, (axes) = plt.subplots(ncols=ncols, nrows=nrows, subplot_kw={'projection': ccrs.NorthPolarStereo(central_longitude=central_longitude)})
     f.set_size_inches(ncols*1.5*sizefcter, nrows*2*sizefcter)
     axes = axes.reshape(-1)
     for (i, ax) in enumerate(axes):
@@ -152,9 +152,9 @@ def multi_polar_axis(ncols=4, nrows=4,
         #ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
         # Full NSIDC extent
         if not extent:
-            axes[i].set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45))
+            axes[i].set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=central_longitude))
         else: # Set Regional extent
-             axes[i].set_extent(extent, crs=ccrs.NorthPolarStereo(central_longitude=-45))
+             axes[i].set_extent(extent, crs=ccrs.NorthPolarStereo(central_longitude=central_longitude))
 
         if i>=Nplots-1:
             f.delaxes(axes[i])

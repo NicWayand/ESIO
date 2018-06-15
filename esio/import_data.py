@@ -100,6 +100,7 @@ def get_valid_time(ds):
         # TODO remove hard corded months (get from fore_offset)
         fore_time_offset = np.array([relativedelta(months=+x) for x in ds.fore_time.values])
         # Switch types around so we can add datetime64[ns] with an object of relativedelta, then convert back
+        #valid_time = xr.DataArray(np.array([ds.init_time.values.astype('M8[D]').astype('O')]), dims='init_time')  +  xr.DataArray(fore_time_offset, dims='fore_time')
         valid_time = xr.DataArray(ds.init_time.values.astype('M8[D]').astype('O'), dims='init_time') +  xr.DataArray(fore_time_offset, dims='fore_time')
         ds.coords['valid_time'] = valid_time.astype('datetime64[ns]')
     else:
