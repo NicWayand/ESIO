@@ -41,6 +41,9 @@ which python
 python "./Import_NSIDC_Obs.py"
 python "./Import_NSIDC_Extents.py"
 
+# Agg Obs to yearly files
+python "./Agg_NSIDC_Obs.py"
+
 # Import Models to sipn format
 source activate test_nio # Requires new env
 python "./Regrid_YOPP.py"
