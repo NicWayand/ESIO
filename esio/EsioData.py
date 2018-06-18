@@ -61,9 +61,17 @@ class EsioData(object):
 
         
     def save(self, filename='ESIO_DATA.pkl'):
-        with open(filename, 'wb') as output:  # Overwrites any existing file.
+        # Get dir from env variabel DATA_DIR
+        DATA_DIR = os.getenv('DATA_DIR')
+        if not DATA_DIR:
+            raise ValueError("Env variable DATA_DIR not set")
+        with open(os.path.join(DATA_DIR, filename), 'wb') as output:  # Overwrites any existing file.
             pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)    
             
     def load(filename='ESIO_DATA.pkl'):
-        return pickle.load( open( filename, 'rb' ) )
+        # Get dir from env variabel DATA_DIR
+        DATA_DIR = os.getenv('DATA_DIR')
+        if not DATA_DIR:
+            raise ValueError("Env variable DATA_DIR not set")
+        return pickle.load( open( os.path.join(DATA_DIR, filename), 'rb' ) )
 
