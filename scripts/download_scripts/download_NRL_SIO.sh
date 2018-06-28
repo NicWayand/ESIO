@@ -33,8 +33,8 @@ mkdir -p $NSIDC_NRL_SIO_DATA_DIR
 
 # Download
 cd $NSIDC_NRL_SIO_DATA_DIR
-wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ARC*_180_*.gz" -N $data_ftp
-wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ANT*_180_*.gz" -N $data_ftp
+wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ARC*_181_*.gz" -N $data_ftp
+wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ANT*_181_*.gz" -N $data_ftp
 
 wait
 

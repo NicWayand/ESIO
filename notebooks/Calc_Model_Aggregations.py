@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -20,7 +20,7 @@ GNU General Public License v3.0
 '''
 
 
-# In[2]:
+# In[ ]:
 
 
 # Standard Imports
@@ -54,7 +54,7 @@ from esio import EsioData as ed
 from esio import metrics
 
 
-# In[3]:
+# In[ ]:
 
 
 def Update_Model_Aggs():
@@ -135,12 +135,12 @@ def Update_Model_Aggs():
         print("Finished...")
 
 
-# In[4]:
+# In[ ]:
 
 
 if __name__ == '__main__':
     # Start up Client
-    client = Client()
+    client = Client(processes=6)
     print(client)
     
     # Call function

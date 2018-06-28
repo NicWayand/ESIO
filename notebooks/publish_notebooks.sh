@@ -18,4 +18,5 @@ pyconvert.sh plot_Regional_Extent.ipynb
 pyconvert.sh Calc_Model_Aggregations.ipynb
 pyconvert.sh Regrid_CFSv2.ipynb
 pyconvert.sh Agg_NSIDC_Obs.ipynb
+pyconvert.sh plot_Maps_Fast.ipynb
 

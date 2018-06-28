@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy import stats
-
+import matplotlib.pyplot as plt
+import matplotlib
 
 def mask_common_extent(ds_obs, ds_mod, max_obs_missing=0.1):
     ''' Define naive_fast that searches for the nearest WRF grid cell center.'''
@@ -225,3 +226,36 @@ def NRMSE(ds_mod, ds_obs, sigma):
 
     NRMSE =  1 - (a / b)
     return NRMSE
+
+def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=False):
+    ''' The Integrated Ice‐Edge Error Goessling 2016'''
+    
+    # Input
+    # da_mod/da_obs - DataArray of sic from model/observations
+    
+    # Output
+    # IEEE - Area of IEEE in km^2, 
+    
+    # Should already be formated the same
+    assert (sorted(da_mod.dims) == sorted(da_obs.dims)), "Dims should be the same."
+    
+    # spatial dims in model and obs should be 'x' and 'y' to match regions var names
+    assert ('x' in da_mod.dims), "'x' and 'y' should be dims."
+    assert ('y' in da_obs.dims), "'x' and 'y' should be dims"
+    
+    # Reduce to sea ice presence
+    mod_sip = (da_mod >= sic_threshold).where(da_mod.notnull())
+    obs_sip = (da_obs >= sic_threshold).where(da_obs.notnull())
+    
+    # Mask to regions of Arctic we are interested in
+    mod_sip = mod_sip.where(region.mask.isin(region.ocean_regions))
+    obs_sip = obs_sip.where(region.mask.isin(region.ocean_regions))
+    
+    if testplots:
+        plt.figure()
+        (abs(mod_sip - obs_sip)).plot(cmap='Reds')
+    
+    # Calculate both terms (over and under area) in km^2
+    IIEE = (abs(mod_sip - obs_sip) * region.area ).sum(dim='x').sum(dim='y')/(10**6)
+    
+    return IIEE

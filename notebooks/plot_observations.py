@@ -64,7 +64,6 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 # In[2]:
 
 
-
 E = ed.EsioData.load()
 
 # Load in Obs

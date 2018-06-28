@@ -53,11 +53,11 @@ which python
 python "./plot_forecast_availability.py"
 
 # Extents
-python "./plot_Extent_Model_Obs.py" &
+python "./plot_Extent_Model_Obs.py" 
 python "./plot_Regional_Extent.py"
 
 # Maps
-#python "./plot_all_model_maps.py" &
+python "./plot_Maps_Fast.py" &
 #python "./plot_Regional_maps.py"
 
 echo Finished NRT script.
