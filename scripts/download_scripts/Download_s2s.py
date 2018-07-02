@@ -24,7 +24,7 @@ import os
 import sys
 import dask
 import numpy as np
-import download
+from esio import download
 import datetime
 
 '''
@@ -62,13 +62,13 @@ print(years)
 print(months)
 
 
-# In[3]:
+# In[ ]:
 
 
 main_dir = '/home/disk/sipn/nicway/data/model'
 
 
-# In[4]:
+# In[ ]:
 
 
 # Templet dicts for each model
@@ -271,7 +271,7 @@ mod_dicts['kma'] = {
 #mod_dicts.keys()
 
 
-# In[5]:
+# In[ ]:
 
 
 # Download by month, wait for each month to finish
