@@ -234,7 +234,7 @@ def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=Fa
     # da_mod/da_obs - DataArray of sic from model/observations
     
     # Output
-    # IEEE - Area of IEEE in km^2, 
+    # IEEE - Area of IEEE in millions of km^2, 
     
     # Should already be formated the same
     assert (sorted(da_mod.dims) == sorted(da_obs.dims)), "Dims should be the same."
@@ -259,3 +259,4 @@ def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=Fa
     IIEE = (abs(mod_sip - obs_sip) * region.area ).sum(dim='x').sum(dim='y')/(10**6)
     
     return IIEE
+

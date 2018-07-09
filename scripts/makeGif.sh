@@ -10,5 +10,5 @@ declare -a metrics=("mean" "anomaly" "SIP")
 for cm in "${metrics[@]}"
 do
 	prefix=panArctic_${cm}_forecast_${dateinit}
-	convert -delay 40 ${inputDir}/${prefix}*.png ${inputDir}/${prefix}_99.gif
+	convert -delay 60 ${inputDir}/${prefix}*.png ${inputDir}/${prefix}_99.gif
 done

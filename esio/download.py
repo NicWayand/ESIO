@@ -3,6 +3,7 @@ import datetime
 import os
 import dask
 import numpy as np
+import pandas as pd
 from ecmwfapi import ECMWFDataServer
 
 
@@ -13,9 +14,9 @@ def download_month(config_dict):
     cserver.retrieve(config_dict)
     return 1
 
-
 def download_data_by_month(dataclass=None, main_dir=None,
-                           mod_dicts=None, cy=None, cm=None):
+                           mod_dicts=None, cy=None, cm=None,
+                           run_type='forecast'):
     X = 1
 
     if dataclass=='s2s':
@@ -31,7 +32,7 @@ def download_data_by_month(dataclass=None, main_dir=None,
     cd = datetime.datetime.now()
     S2S = cd - datetime.timedelta(days=day_lag)
 
-    # Check if current month, insure dates are not within last 21 days (embargo)
+    # Check if current month, insure dates are not within last 16/21 days (embargo)
     DE = np.min([DE, S2S])
 
     # Check if most recent init date is before current month start
@@ -43,17 +44,33 @@ def download_data_by_month(dataclass=None, main_dir=None,
         return 0 # Just return an int for dask. Don't continue here.
 
     # Create date range as string
-    date_range = DS.strftime('%Y-%m-%d')+'/to/'+ DE.strftime('%Y-%m-%d')
-
-    print(date_range)
-
+    
+    # Forecast syntax allows the start/to/end syntax
+    if run_type=='forecast':
+        date_range = DS.strftime('%Y-%m-%d')+'/to/'+ DE.strftime('%Y-%m-%d')
+        print(date_range)
+    elif run_type=='reforecast':
+        pd_dates = pd.date_range(start=DS,end=DE,freq='D')
+        date_range = [x.strftime('%Y-%m-%d') for x in pd_dates]
+        print(date_range[0],date_range[-1])
+        date_range = '/'.join(date_range)
+    else:
+        raise ValueError('run_type not found.')   
+        
+    
     for cmod in mod_dicts.keys():
         print(cmod)
         cdict = mod_dicts[cmod]
         # Update cdict
-        print(date_range)
-        cdict['date'] = date_range
-        target = os.path.join(main_dir, cmod, 'forecast', 'native',
+        # If forecast update "date"
+        if run_type=='forecast':
+            cdict['date'] = date_range
+        # else, if a REforecast, update "hdate"
+        elif run_type=='reforecast':
+            cdict['hdate'] = date_range
+        else:
+            raise ValueError('run_type not found.')
+        target = os.path.join(main_dir, cmod, run_type, 'native',
                                   cmod+'_'+str(cy)+'_'+format(cm, '02')+'.grib')
         cdict['target'] = target
         cdict['expect'] = 'any'

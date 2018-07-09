@@ -123,6 +123,18 @@ def rename_coords(ds):
     ds = ds.rename(new_dict)
     return ds
 
+def rename_vars(ds=None, var_dict=None):
+    c_vars = list(ds.data_vars.keys())
+    
+    new_dict = {}
+    for key, value in var_dict.items():
+        r = re.compile(key)
+        newlist = list(filter(r.match, c_vars))
+        if len(newlist)>0:
+            new_dict[newlist[0]] = value
+    ds = ds.rename(new_dict)
+    return ds
+
 
 def open_1_member_monthly(cfiles, e):
     ds = xr.open_mfdataset(cfiles, concat_dim='init_time', decode_times=False,
