@@ -100,7 +100,8 @@ def calc_IFD(da, sic_threshold=0.15, DOY_s=1, time_dim='time'):
 
 def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10):
     ''' Calc the Ice Free Day (first) by Calender Year. 
-    Finds first day 
+    Returns day of year (doy) for each pixel when the sic value dropped below the sic_threshold 
+    and stayed below that threshold for atleast Nday days.
     '''
     da = da.rename({time_dim:'time'})
 
