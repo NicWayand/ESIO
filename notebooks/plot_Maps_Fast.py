@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[2]:
+# In[1]:
 
 
 '''
@@ -77,7 +77,7 @@ def remove_small_contours(p, thres=10):
                 del(level.get_paths()[kp])  # no remove() for Path objects:(
 
 
-# In[12]:
+# In[2]:
 
 
 def get_figure_init_times(fig_dir):
@@ -93,7 +93,7 @@ def get_figure_init_times(fig_dir):
 # get_figure_init_times( os.path.join(ed.EsioData.load().fig_dir, 'model', 'all_model', 'sic', 'maps_weekly'))
 
 
-# In[ ]:
+# In[3]:
 
 
 def update_status(ds_status=None, fig_dir=None, int_2_days_dict=None, NweeksUpdate=3):
@@ -136,7 +136,7 @@ def Update_PanArctic_Maps():
     start_t = datetime.datetime(1950, 1, 1) # datetime.datetime(1950, 1, 1)
     # Parms for this plot
     Ndays = 7 # time period to aggregate maps to
-    Npers = 12 # number of periods to plot (from current date)
+    Npers = 14 # number of periods to plot (from current date)
     init_slice = np.arange(start_t, cd, datetime.timedelta(days=Ndays)).astype('datetime64[ns]')
     init_slice = init_slice[-Npers:] # Select only the last Npers of periods (weeks) since current date
 
@@ -147,6 +147,7 @@ def Update_PanArctic_Maps():
     slices = weeks.union(months).union(years).round('1d')
     da_slices = xr.DataArray(slices, dims=('fore_time'))
     da_slices.fore_time.values.astype('timedelta64[D]')
+    print(da_slices)
 
     # Help conversion between "week/month" period used for figure naming and the actual forecast time delta value
     int_2_days_dict = dict(zip(np.arange(0,da_slices.size), da_slices.values))
@@ -188,13 +189,15 @@ def Update_PanArctic_Maps():
         ds_status = ds_status.to_dataset()
 
         # Check what plots we already have
-        if ~updateAll:
+        if not updateAll:
+            print("Removing figures we have already made")
             ds_status = update_status(ds_status=ds_status, fig_dir=fig_dir, int_2_days_dict=int_2_days_dict)
-            print(ds_status.status.values)
-
+            
+        print(ds_status.status.values)
         # Drop IC/FT we have already plotted (orthoginal only)
         ds_status = ds_status.where(ds_status.status.sum(dim='fore_time')<ds_status.fore_time.size, drop=True)
-
+        print(ds_status.status.values)
+        
         print("Starting plots...")
         # For each init_time we haven't plotted yet
         start_time_cmod = timeit.default_timer()
@@ -208,6 +211,7 @@ def Update_PanArctic_Maps():
             for ft in ft_to_plot.values: 
                 print(ft.astype('timedelta64[D]'))
                 cs_str = format(days_2_int_dict[ft], '02')
+                week_str = format(int(ft.astype('timedelta64[D]').astype('int')/Ndays) , '02')
                 cdoy = pd.to_datetime(it + ft).timetuple().tm_yday
                 it_yr = str(pd.to_datetime(it).year)
                 it_m = str(pd.to_datetime(it).month)
@@ -438,8 +442,8 @@ def Update_PanArctic_Maps():
                     init_time_1 =  pd.to_datetime(it_start).strftime('%Y-%m-%d')
                     valid_time_2 = pd.to_datetime(it+ft).strftime('%Y-%m-%d')
                     valid_time_1 = pd.to_datetime(it_start+ft).strftime('%Y-%m-%d')
-                    plt.suptitle('Initialization Time: '+init_time_1+' to '+init_time_2+'\n Valid Time: '+valid_time_1+' to '+valid_time_2+'\n Week '+cs_str,
-                                 fontsize=15)
+                    plt.suptitle('Initialization Time: '+init_time_1+' to '+init_time_2+'\n Valid Time: '+valid_time_1+' to '+valid_time_2,
+                                 fontsize=15) # +'\n Week '+week_str
                     plt.subplots_adjust(top=0.85)
 
                     # Save to file
@@ -474,12 +478,6 @@ def Update_PanArctic_Maps():
 
 
     json_format = get_figure_init_times(fig_dir)
-
-    # Update json file that keeps track of what plots we have
-#     init_plotted = ds_status.status.sum(dim='fore_time')
-#     init_plotted = list(reversed(sorted(init_plotted.where(init_plotted>0, drop=True).init_time.values)))
-
-#     json_format = [pd.to_datetime(x).strftime('%Y-%m-%d') for x in init_plotted]
     json_dict = [{"date":cd,"label":cd} for cd in json_format]
 
     json_f = os.path.join(fig_dir, 'plotdates_current.json')
@@ -503,5 +501,27 @@ if __name__ == '__main__':
     
     # Call function
     Update_PanArctic_Maps()
+
+
+# In[4]:
+
+
+# Run below in case we need to just update the json file and gifs
+
+
+fig_dir = '/home/disk/sipn/nicway/public_html/sipn/figures/model/all_model/sic/maps_weekly'
+json_format = get_figure_init_times(fig_dir)
+json_dict = [{"date":cd,"label":cd} for cd in json_format]
+
+json_f = os.path.join(fig_dir, 'plotdates_current.json')
+with open(json_f, 'w') as outfile:
+    json.dump(json_dict, outfile)
+
+# Make into Gifs
+# TODO fig_dir hardcoded to current variable
+for cit in json_format:
+    subprocess.call(str("/home/disk/sipn/nicway/python/ESIO/scripts/makeGif.sh " + fig_dir + " " + cit), shell=True)
+
+print("Finished plotting panArctic Maps.")
 
 

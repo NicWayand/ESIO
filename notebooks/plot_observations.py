@@ -77,7 +77,7 @@ start_time = timeit.default_timer()
 #                                    autoclose=True, 
 #                                    compat='no_conflicts',
 #                                    data_vars=['sic','extent','area'])
-ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='time', autoclose=True)
+ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'_yearly/*.nc', concat_dim='time', autoclose=True)
 print(timeit.default_timer() - start_time)
 
 # Get mean sic by DOY

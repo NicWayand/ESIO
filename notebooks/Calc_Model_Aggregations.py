@@ -140,7 +140,7 @@ def Update_Model_Aggs():
 
 if __name__ == '__main__':
     # Start up Client
-    client = Client(processes=6)
+    client = Client(processes=12)
     print(client)
     
     # Call function

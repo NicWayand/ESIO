@@ -40,7 +40,7 @@ import dask
 # c
 
 
-# In[5]:
+# In[3]:
 
 
 # Dirs
@@ -61,21 +61,21 @@ for c_product in product_list:
 
     for cyear in np.arange(1979,cy+1,1):
         
-        cyear = str(cyear)
+        cyear_str = str(cyear)
         
         out_dir = os.path.join(data_dir, c_product, 'sipn_nc_yearly')
         if not os.path.exists(out_dir):
                 os.makedirs(out_dir)
                 
-        nc_out = os.path.join(out_dir, cyear+'.nc')
+        nc_out = os.path.join(out_dir, cyear_str+'.nc')
         # Don't update file if exits, unless current year
         if (os.path.isfile(nc_out)) & (cyear!=cy):
             continue
 
         # Load in Obs
-        if len(glob.glob(E.obs[c_product]['sipn_nc']+'/nt_'+cyear+'*.nc'))==0:
+        if len(glob.glob(E.obs[c_product]['sipn_nc']+'/nt_'+cyear_str+'*.nc'))==0:
             continue
-        ds_year = xr.open_mfdataset(E.obs[c_product]['sipn_nc']+'/nt_'+cyear+'*.nc', 
+        ds_year = xr.open_mfdataset(E.obs[c_product]['sipn_nc']+'/nt_'+cyear_str+'*.nc', 
                                       concat_dim='time', autoclose=True, parallel=True)
 
         
