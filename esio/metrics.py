@@ -123,6 +123,33 @@ def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10):
     return ifd
 
 
+def calc_hist_sip(ds_sic=None, ystart='2007', yend='2017', sic_threshold=0.15):
+    ''' Calc historical SIP for a range of years'''
+    
+    # Trim by years
+    ds_sic = ds_sic.sel(time=slice(ystart, yend))
+    
+    # Get landmask (where sic is NaN)
+    land_mask = ds_sic.drop('hole_mask').isel(time=0).notnull()
+    
+    # Convert sea ice presence
+    ds_sp = (ds_sic >= sic_threshold).astype('int') # This unfortunatly makes all NaN -> zeros...
+    
+    # Fill in pole hole with 1 (so contours don't get made around it)
+    ds_sp = ds_sp.where(ds_sp.hole_mask==0, other=1).drop('hole_mask')
+    
+    # Add DOY
+    DOY = [x.timetuple().tm_yday for x in pd.to_datetime(ds_sp.time.values)]
+    ds_sp['time'] = DOY
+    
+    # Calculate mean SIP
+    ds_sip = ds_sp.groupby('time').mean(dim='time')
+    
+    # Mask land
+    ds_sip = ds_sip.where(land_mask)
+    
+    return ds_sip
+
 def nanSum(da=None, dim=None):
     ''' Return nan sum for pixels where we have atleast 1 NaN value. '''
     return da.sum(dim=dim).where(da.notnull().sum(dim=dim) > 0 )
