@@ -145,7 +145,7 @@ for cf in all_files:
         # (1-land_mask) is fraction ocean
         # Multiply sic by fraction ocean to get actual native grid cell sic
         # Also mask land out where land_mask==1
-        ds[cvar] = ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<0.9)) # Using 90% threshold here
+        ds[cvar] = ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<0.5)) # Using 50% threshold here
         
 
 #     ds.coords['nj'] = model_grid.nj

@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[3]:
 
 
 '''
@@ -43,6 +43,10 @@ ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 # Products to import
 product_list = ['NSIDC_0081', 'NSIDC_0051', 'NSIDC_0079']
 
+# Version numbers (if any)
+# If multiple version number files exist, it only imports the one specified below
+ver_nums = {'NSIDC_0079':'v3.1','NSIDC_0081':'nrt','NSIDC_0051':'v1.1'}
+
 ds_lat_lon = import_data.get_stero_N_grid(grid_dir=E.grid_dir)
 
 # Loop through each product
@@ -52,7 +56,7 @@ for c_product in product_list:
     # Find new files that haven't been imported yet
     native_dir = os.path.join(data_dir, c_product, 'native')
     os.chdir(native_dir)
-    native_files = sorted(glob.glob('*.bin'))
+    native_files = sorted(glob.glob('*'+ver_nums[c_product]+'*.bin'))
     nc_dir = os.path.join(data_dir, c_product, 'sipn_nc')
     os.chdir(nc_dir)
     nc_files = sorted(glob.glob('*.nc'))

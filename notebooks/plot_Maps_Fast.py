@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -77,7 +77,7 @@ def remove_small_contours(p, thres=10):
                 del(level.get_paths()[kp])  # no remove() for Path objects:(
 
 
-# In[2]:
+# In[ ]:
 
 
 def get_figure_init_times(fig_dir):
@@ -93,7 +93,7 @@ def get_figure_init_times(fig_dir):
 # get_figure_init_times( os.path.join(ed.EsioData.load().fig_dir, 'model', 'all_model', 'sic', 'maps_weekly'))
 
 
-# In[3]:
+# In[ ]:
 
 
 def update_status(ds_status=None, fig_dir=None, int_2_days_dict=None, NweeksUpdate=3):
@@ -162,8 +162,11 @@ def Update_PanArctic_Maps():
     median_ice_fill = xr.open_mfdataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'ice_edge.nc')).sic
     # Get mean sic by DOY
     mean_1980_2010_sic = xr.open_dataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'mean_1980_2010_sic.nc')).sic
+    # Get average sip by DOY
+    mean_1980_2010_SIP = xr.open_dataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'hist_SIP_1980_2010.nc')).sip    
+    
+    # Get current observations
     ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'_yearly/*.nc', concat_dim='time', autoclose=True, parallel=True)#,
-
 
     # Define models to plot
     models_2_plot = list(E.model.keys())
@@ -196,7 +199,6 @@ def Update_PanArctic_Maps():
         print(ds_status.status.values)
         # Drop IC/FT we have already plotted (orthoginal only)
         ds_status = ds_status.where(ds_status.status.sum(dim='fore_time')<ds_status.fore_time.size, drop=True)
-        print(ds_status.status.values)
         
         print("Starting plots...")
         # For each init_time we haven't plotted yet
@@ -212,7 +214,8 @@ def Update_PanArctic_Maps():
                 print(ft.astype('timedelta64[D]'))
                 cs_str = format(days_2_int_dict[ft], '02')
                 week_str = format(int(ft.astype('timedelta64[D]').astype('int')/Ndays) , '02')
-                cdoy = pd.to_datetime(it + ft).timetuple().tm_yday
+                cdoy_end = pd.to_datetime(it + ft).timetuple().tm_yday
+                cdoy_start = pd.to_datetime(it_start + ft).timetuple().tm_yday
                 it_yr = str(pd.to_datetime(it).year)
                 it_m = str(pd.to_datetime(it).month)
 
@@ -261,17 +264,27 @@ def Update_PanArctic_Maps():
                     start_time_plot = timeit.default_timer()
                     (f, axes) = ice_plot.multi_polar_axis(ncols=Nc, nrows=Nr, Nplots=Nmod)
 
+                    
+                    ############################################################################
+                    #                               OBSERVATIONS                               #
+                    ############################################################################
+                    
                     # Plot Obs (if available)
                     ax_num = 0
-                    if ((it + ft) in ds_81.time.values):
+                    axes[ax_num].set_title('Observed')
+                    #ds_model = ds_model.sel(init_time=slice(it_start, it))
+                    da_obs_c = ds_81.sic.sel(time=slice(valid_start,valid_end))
+                    # Check we found any times in target valid time range
+                    if da_obs_c.time.size>0:
+                    #if ((it + ft) in ds_81.time.values):
 
                         if metric=='mean':
-                            da_obs_c = ds_81.sic.sel(time=(it + ft))
+                            da_obs_c = da_obs_c.mean(dim='time') #ds_81.sic.sel(time=(it + ft))
                         elif metric=='SIP':
-                            da_obs_c = (ds_81.sic.sel(time=(it + ft)) >=0.15).astype('int').where(ds_81.sic.sel(time=(it + ft)).notnull())
+                            da_obs_c = (da_obs_c >= 0.15).mean(dim='time').astype('int').where(da_obs_c.isel(time=0).notnull())
                         elif metric=='anomaly':
-                            da_obs_VT = ds_81.sic.sel(time=(it + ft))
-                            da_obs_mean = mean_1980_2010_sic.isel(time=cdoy)
+                            da_obs_VT = da_obs_c.mean(dim='time')
+                            da_obs_mean = mean_1980_2010_sic.isel(time=slice(cdoy_start,cdoy_end)).mean(dim='time')
                             da_obs_c = da_obs_VT - da_obs_mean
                         else:
                             raise ValueError('Not implemented')
@@ -280,7 +293,7 @@ def Update_PanArctic_Maps():
                                               add_colorbar=False,
                                               cmap=cmap_c,
                                               vmin=c_vmin, vmax=c_vmax)
-
+                        axes[ax_num].set_title('Observed')
                         # Overlay median ice edge
                         #if metric=='mean':
                             #po = median_ice_fill.isel(time=cdoy).plot.contour(ax=axes[ax_num], x='xm', y='ym', 
@@ -290,10 +303,21 @@ def Update_PanArctic_Maps():
                             #remove_small_contours(po, thres=10)
                     else: # When were in the future (or obs are missing)
                         if metric=='anomaly': # Still get climatological mean for model difference
-                            da_obs_mean = mean_1980_2010_sic.isel(time=cdoy)
-                    axes[ax_num].set_title('Observed')
+                            da_obs_mean = mean_1980_2010_sic.isel(time=slice(cdoy_start,cdoy_end)).mean(dim='time')
+                        elif metric=='SIP': # Plot this historical mean SIP 
+                            da_obs_c = mean_1980_2010_SIP.isel(time=slice(cdoy_start,cdoy_end)).mean(dim='time')
+                            da_obs_c.plot.pcolormesh(ax=axes[ax_num], x='lon', y='lat', 
+                              transform=ccrs.PlateCarree(),
+                              add_colorbar=False,
+                              cmap=cmap_c,
+                              vmin=c_vmin, vmax=c_vmax)
+                            axes[ax_num].set_title('Hist. Obs.')
 
-
+                    ############################################################################
+                    #                               MODELS                                     #
+                    ############################################################################
+                            
+                            
                     # Plot all Models
                     p = None # initlaize to know if we found any data
                     for (i, cmod) in enumerate(models_2_plot):
@@ -503,25 +527,25 @@ if __name__ == '__main__':
     Update_PanArctic_Maps()
 
 
-# In[4]:
+# In[ ]:
 
 
-# Run below in case we need to just update the json file and gifs
+# # Run below in case we need to just update the json file and gifs
 
 
-fig_dir = '/home/disk/sipn/nicway/public_html/sipn/figures/model/all_model/sic/maps_weekly'
-json_format = get_figure_init_times(fig_dir)
-json_dict = [{"date":cd,"label":cd} for cd in json_format]
+# fig_dir = '/home/disk/sipn/nicway/public_html/sipn/figures/model/all_model/sic/maps_weekly'
+# json_format = get_figure_init_times(fig_dir)
+# json_dict = [{"date":cd,"label":cd} for cd in json_format]
 
-json_f = os.path.join(fig_dir, 'plotdates_current.json')
-with open(json_f, 'w') as outfile:
-    json.dump(json_dict, outfile)
+# json_f = os.path.join(fig_dir, 'plotdates_current.json')
+# with open(json_f, 'w') as outfile:
+#     json.dump(json_dict, outfile)
 
-# Make into Gifs
-# TODO fig_dir hardcoded to current variable
-for cit in json_format:
-    subprocess.call(str("/home/disk/sipn/nicway/python/ESIO/scripts/makeGif.sh " + fig_dir + " " + cit), shell=True)
+# # Make into Gifs
+# # TODO fig_dir hardcoded to current variable
+# for cit in json_format:
+#     subprocess.call(str("/home/disk/sipn/nicway/python/ESIO/scripts/makeGif.sh " + fig_dir + " " + cit), shell=True)
 
-print("Finished plotting panArctic Maps.")
+# print("Finished plotting panArctic Maps.")
 
 

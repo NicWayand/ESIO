@@ -98,7 +98,7 @@ def calc_IFD(da, sic_threshold=0.15, DOY_s=1, time_dim='time'):
     ifd = ifd + DOY_s
     return ifd
 
-def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10):
+def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10, default_ice_free=None):
     ''' Calc the Ice Free Day (first) by Calender Year. 
     Returns day of year (doy) for each pixel when the sic value dropped below the sic_threshold 
     and stayed below that threshold for atleast Nday days.
@@ -115,10 +115,14 @@ def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10):
     # Now reduce over time dime, and find the first "1" value for each pixel (which is the last day of ice presence, with at least 10 days following ice free)
     ifd = sip_Xday_adj.reduce(np.argmax, dim='time') # Find index of first ice free
     
-    # Apply Orig mask
-    ifd = ifd.where(da.isel(time=0).notnull()) 
     # Convert to Day of Year by adding the first time
     ifd = ifd + DOY_s - Nday # Add DOY_s and subtract the Nday window (rolling returns the right side label "trailing")
+    
+    # Set those pixels that were ice-free on the first model valid date, to the default ice free date (i.e. June 1st = SIPN Report standard)
+    ifd = ifd.where(ifd > (DOY_s - Nday), other=default_ice_free)
+       
+    # Apply Orig mask
+    ifd = ifd.where(da.isel(time=0).notnull())    
 
     return ifd
 
@@ -131,12 +135,14 @@ def calc_hist_sip(ds_sic=None, ystart='2007', yend='2017', sic_threshold=0.15):
     
     # Get landmask (where sic is NaN)
     land_mask = ds_sic.drop('hole_mask').isel(time=0).notnull()
+    #land_mask.plot()
     
     # Convert sea ice presence
     ds_sp = (ds_sic >= sic_threshold).astype('int') # This unfortunatly makes all NaN -> zeros...
+    #ds_sp.isel(time=0).plot()
     
     # Fill in pole hole with 1 (so contours don't get made around it)
-    ds_sp = ds_sp.where(ds_sp.hole_mask==0, other=1).drop('hole_mask')
+    ds_sp = ds_sp.where(ds_sic.hole_mask==0, other=1).drop('hole_mask')
     
     # Add DOY
     DOY = [x.timetuple().tm_yday for x in pd.to_datetime(ds_sp.time.values)]

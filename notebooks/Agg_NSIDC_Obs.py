@@ -48,7 +48,7 @@ E = ed.EsioData.load()
 data_dir = E.obs_dir
 
 # Flags
-UpdateAll = True
+UpdateAll = False
 
 # Products to import
 product_list = ['NSIDC_0081' , 'NSIDC_0079', 'NSIDC_0051']
@@ -60,6 +60,7 @@ for c_product in product_list:
     print('Aggregating ', c_product, '...')
 
     for cyear in np.arange(1979,cy+1,1):
+        #print(cyear)
         
         cyear_str = str(cyear)
         
@@ -70,12 +71,15 @@ for c_product in product_list:
         nc_out = os.path.join(out_dir, cyear_str+'.nc')
         # Don't update file if exits, unless current year
         if (os.path.isfile(nc_out)) & (cyear!=cy):
+            #print("File already exists")
             continue
 
         # Load in Obs
-        if len(glob.glob(E.obs[c_product]['sipn_nc']+'/nt_'+cyear_str+'*.nc'))==0:
+        c_files = sorted(glob.glob(E.obs[c_product]['sipn_nc']+'/*_'+cyear_str+'*.nc'))
+        if len(c_files)==0:
+            #print("No files found for current year")
             continue
-        ds_year = xr.open_mfdataset(E.obs[c_product]['sipn_nc']+'/nt_'+cyear_str+'*.nc', 
+        ds_year = xr.open_mfdataset(c_files, 
                                       concat_dim='time', autoclose=True, parallel=True)
 
         

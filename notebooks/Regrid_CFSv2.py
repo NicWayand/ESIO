@@ -48,12 +48,22 @@ from esio import import_data
 # In[2]:
 
 
+# From Thomas Callow:
+# siemean201804.nc is 20-member ensemble mean bias corrected Arctic sea ice extent, 
+# monthly May 2018 through January 2019 , model initialized April 21-25 00z
+#
+# So we assume the init date is always the 21st to 25th of the month prior to the first forecast month
+
+
+# In[3]:
+
+
 # General plotting settings
 sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[3]:
+# In[4]:
 
 
 E = ed.EsioData.load()
@@ -63,7 +73,7 @@ runType='forecast'
 updateall = False
 
 
-# In[4]:
+# In[5]:
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
@@ -73,14 +83,14 @@ obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[5]:
+# In[6]:
 
 
 # Regridding Options
 method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[6]:
+# In[7]:
 
 
 ## TODO
@@ -88,20 +98,20 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # - Get lat lon bounds 
 
 
-# In[7]:
+# In[8]:
 
 
 var_dic = {'time':'valid_time','ens':'ensemble'}
 
 
-# In[8]:
+# In[9]:
 
 
 # Option to shift time stamp from begining of month to end
 monthly_in = {'noaasipn':True}
 
 
-# In[9]:
+# In[10]:
 
 
 for model in all_models:
@@ -149,7 +159,10 @@ for model in all_models:
         ds.rename(var_dic, inplace=True);
         
         # Get initialization time
-        ds.coords['init_time'] = ds.valid_time.isel(valid_time=0).values # get first one
+        month_1 = pd.to_datetime(ds.valid_time.isel(valid_time=0).values) # first forecast month (valid time)
+        init_1 = np.datetime64(datetime.datetime(month_1.year,month_1.month-1,25)) # Init if preious month from 21-25, use 25th here
+        
+        ds.coords['init_time'] = init_1 
         ds.coords['init_time'].attrs['comments'] = 'Initilzation time of forecast'
         # Set forecast time
         ds.coords['fore_time'] = ds.valid_time - ds.init_time
@@ -159,9 +172,10 @@ for model in all_models:
         ds = ds.drop('valid_time')
 
         # Shift time stamp to middle of month
-        if monthly_in[model]:
-            print("shifting monthly time stamp to middle of month")
-            ds.coords['init_time'] = ds.init_time + np.timedelta64(15, 'D')
+        # Moved this to plot scripts
+#         if monthly_in[model]:
+#             print("shifting monthly time stamp to middle of month")
+#             ds.coords['init_time'] = ds.init_time + np.timedelta64(15, 'D')
 
         # Apply masks (if available)
         if ds_mask:
@@ -196,7 +210,7 @@ for model in all_models:
         print('Saved ', f_out)
 
 
-# In[10]:
+# In[11]:
 
 
 # Clean up
@@ -206,7 +220,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[11]:
+# In[12]:
 
 
 # sic_all = xr.open_mfdataset(f_out)
