@@ -5,7 +5,7 @@ notebooks/old
 notebooks/untracked
 scripts/download_scripts/pyconvert.sh
 scripts/download_scripts/strip_magic.py
-test_scripts/
+old_scripts/
 scripts/scheduler/
 scripts/old/
 .idea/

@@ -1,4 +1,3 @@
-from esio import EsioData as ed
 from esio import ice_plot
 from esio import import_data
 from esio import metrics
@@ -6,9 +5,6 @@ from esio import metrics
 import xarray as xr
 import numpy as np
 import datetime
-
-E = ed.EsioData.load()
-
 
 # Make test model SIP data
 da_sip = xr.DataArray(np.ones((1,1,1,3)), 

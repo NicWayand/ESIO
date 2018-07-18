@@ -1,0 +1,9 @@
+language: python
+python:
+          - "3.6"
+# command to install dependencies
+install:
+  - pip install -r requirements_esio.txt
+# command to run tests
+script:
+  - pytest /tests/test.py # or py.test for Python versions 3.5 and below
