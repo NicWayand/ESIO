@@ -98,7 +98,7 @@ def calc_IFD(da, sic_threshold=0.15, DOY_s=1, time_dim='time'):
     ifd = ifd + DOY_s
     return ifd
 
-def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10, default_ice_free=None):
+def calc_IFD_10day(da, sic_threshold=0.5, DOY_s=1, time_dim='time', Nday=10, default_ice_free=None):
     ''' Calc the Ice Free Day (first) by Calender Year. 
     Returns day of year (doy) for each pixel when the sic value dropped below the sic_threshold 
     and stayed below that threshold for atleast Nday days.
@@ -114,13 +114,27 @@ def calc_IFD_10day(da, sic_threshold=0.15, DOY_s=1, time_dim='time', Nday=10, de
 
     # Now reduce over time dime, and find the first "1" value for each pixel (which is the last day of ice presence, with at least 10 days following ice free)
     ifd = sip_Xday_adj.reduce(np.argmax, dim='time') # Find index of first ice free
+    #plt.figure()
+    #ifd.plot()
     
     # Convert to Day of Year by adding the first time
-    ifd = ifd + DOY_s - Nday # Add DOY_s and subtract the Nday window (rolling returns the right side label "trailing")
+    ifd = ifd + DOY_s - Nday - 1 # Add DOY_s and subtract the Nday window (rolling returns the right side label "trailing")
+    #plt.figure()
+    #ifd.plot()
     
-    # Set those pixels that were ice-free on the first model valid date, to the default ice free date (i.e. June 1st = SIPN Report standard)
-    ifd = ifd.where(ifd > (DOY_s - Nday), other=default_ice_free)
-       
+    # Classify pixels 
+    # 1) that were ice free at first index time to the default ice free date (i.e. June 1st)
+    ifd = ifd.where(ifd > DOY_s, other=default_ice_free)
+    #plt.figure()
+    #ifd.plot()
+    
+    # 2) that never melted (perenial) to NaN
+    # Grab last model time (end of Sept) and get mask of where ice is
+    perenial_ice_mask = (da.isel(time=da.time.size-1) >= sic_threshold)
+    ifd = ifd.where(~perenial_ice_mask, other=275)
+    #plt.figure()
+    #ifd.plot()
+        
     # Apply Orig mask
     ifd = ifd.where(da.isel(time=0).notnull())    
 
@@ -294,3 +308,50 @@ def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=Fa
     
     return IIEE
 
+def _BSS(mod=None, obs=None, time_dim=None):
+    return ((mod-obs)**2).mean(dim=time_dim)
+
+def BrierSkillScore(da_mod_sip=None, da_obs_ip=None, 
+                    time_dim='valid_time', region=None, 
+                    testplots=False):
+    '''
+    Brier Skill Score
+    ----------
+    Parameters:
+    da_mod_sip : DataArray
+        DataArray of modeled sea ice probabilies (0-1)
+    da_obs_ip : DataArray
+        DataArray of observed sea ice presence (0 or 1)
+    time_dim: String
+        Name of time dimension to take mean over when calculating the BSS
+    region : DataSet
+        DataSet contain spatial location of Arctic regions
+    testplots : Boolean
+        Flag to turn on test plots    
+        
+    Returns:
+    BSS = Brier Skill Score
+    
+    '''
+    
+    # Should already be formated the same
+    assert (sorted(da_mod_sip.dims) == sorted(da_obs_ip.dims)), "Dims should be the same."
+    
+    # spatial dims in model and obs should be 'x' and 'y' to match regions var names
+    assert ('x' in da_mod_sip.dims), "'x' and 'y' should be dims."
+    assert ('y' in da_obs_ip.dims), "'x' and 'y' should be dims"
+        
+    # Mask to regions of Arctic we are interested in
+    da_mod_sip = da_mod_sip.where(region.mask.isin(region.ocean_regions))
+    da_obs_ip = da_obs_ip.where(region.mask.isin(region.ocean_regions))
+    
+    if testplots:
+        plt.figure()
+        da_mod_sip.plot()
+        plt.figure()
+        da_obs_ip.plot()        
+    
+    # Calculate Brier Skill Score
+    BSS = _BSS(mod,obs)
+    
+    return BSS
