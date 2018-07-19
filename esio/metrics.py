@@ -308,7 +308,7 @@ def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=Fa
     
     return IIEE
 
-def _BSS(mod=None, obs=None, time_dim=None):
+def _BSS(mod=None, obs=None, time_dim='time'):
     return ((mod-obs)**2).mean(dim=time_dim)
 
 def BrierSkillScore(da_mod_sip=None, da_obs_ip=None, 
@@ -344,14 +344,18 @@ def BrierSkillScore(da_mod_sip=None, da_obs_ip=None,
     # Mask to regions of Arctic we are interested in
     da_mod_sip = da_mod_sip.where(region.mask.isin(region.ocean_regions))
     da_obs_ip = da_obs_ip.where(region.mask.isin(region.ocean_regions))
+        
+    # Calculate Brier Skill Score
+    BSS = _BSS(mod = da_mod_sip, 
+               obs = da_obs_ip,
+               time_dim = time_dim)
     
     if testplots:
         plt.figure()
         da_mod_sip.plot()
         plt.figure()
-        da_obs_ip.plot()        
-    
-    # Calculate Brier Skill Score
-    BSS = _BSS(mod,obs)
-    
+        da_obs_ip.plot()   
+        plt.figure()
+        BSS.plot()
+            
     return BSS
