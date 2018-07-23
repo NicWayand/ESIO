@@ -149,11 +149,9 @@ def calc_hist_sip(ds_sic=None, ystart='2007', yend='2017', sic_threshold=0.15):
     
     # Get landmask (where sic is NaN)
     land_mask = ds_sic.drop('hole_mask').isel(time=0).notnull()
-    #land_mask.plot()
     
     # Convert sea ice presence
     ds_sp = (ds_sic >= sic_threshold).astype('int') # This unfortunatly makes all NaN -> zeros...
-    #ds_sp.isel(time=0).plot()
     
     # Fill in pole hole with 1 (so contours don't get made around it)
     ds_sp = ds_sp.where(ds_sic.hole_mask==0, other=1).drop('hole_mask')
@@ -331,7 +329,6 @@ def BrierSkillScore(da_mod_sip=None, da_obs_ip=None,
         
     Returns:
     BSS = Brier Skill Score
-    
     '''
     
     # Should already be formated the same
@@ -359,3 +356,27 @@ def BrierSkillScore(da_mod_sip=None, da_obs_ip=None,
         BSS.plot()
             
     return BSS
+
+
+
+def _lrm(x=None, y=None):
+    '''wrapper that returns the slope from a linear regression fit of x and y'''
+    # TODO remove hardcoded 2018 (was not passing more then 2 arg???)
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+    predict_y = intercept + slope * 2018
+    return predict_y
+
+
+def linearRegressionModel(obj, xdim, pyear):
+    time_nums = xr.DataArray(obj[xdim].values.astype(np.float),
+                             dims=xdim,
+                             coords={xdim: obj[xdim]},
+                             name=xdim)
+    trend = xr.apply_ufunc(_lrm, time_nums, obj,
+                           vectorize=True,
+                           input_core_dims=[[xdim], [xdim]],
+                           output_core_dims=[[]],
+                           output_dtypes=[np.float],
+                           dask='parallelized')
+
+    return trend
