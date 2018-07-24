@@ -360,7 +360,7 @@ def BrierSkillScore(da_mod_sip=None, da_obs_ip=None,
 
 
 def _lrm(x=None, y=None):
-    '''wrapper that returns the slope from a linear regression fit of x and y'''
+    '''wrapper that returns the predicted values from a linear regression fit of x and y'''
     # TODO remove hardcoded 2018 (was not passing more then 2 arg???)
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
     predict_y = intercept + slope * 2018
@@ -372,11 +372,39 @@ def linearRegressionModel(obj, xdim, pyear):
                              dims=xdim,
                              coords={xdim: obj[xdim]},
                              name=xdim)
-    trend = xr.apply_ufunc(_lrm, time_nums, obj,
+    predictant = xr.apply_ufunc(_lrm, time_nums, obj,
                            vectorize=True,
                            input_core_dims=[[xdim], [xdim]],
                            output_core_dims=[[]],
                            output_dtypes=[np.float],
                            dask='parallelized')
 
-    return trend
+    return predictant
+
+def _remove_trend(x, y):
+    '''wrapper that removes the trend from a linear regression fit of x and y'''
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+    detrend_y = y - (slope * x + intercept)
+    return detrend_y
+
+def detrend(obj, xdim):
+    time_nums = xr.DataArray(obj[xdim].values.astype(np.float),
+                             dims=xdim,
+                             coords={xdim: obj[xdim]},
+                             name=xdim)
+    detrend_y = xr.apply_ufunc(_remove_trend, time_nums, obj,
+                           vectorize=True,
+                           input_core_dims=[[xdim], [xdim]],
+                           output_core_dims=[[xdim]],
+                           output_dtypes=[np.float],
+                           dask='parallelized')
+    
+    return detrend_y
+
+def get_DOY(da):
+    ''' Return the day of the year given a datetime64 DataArray'''
+    if da.size==1:
+        DOY_all = [x.timetuple().tm_yday for x in pd.to_datetime([da.values])]
+    else:
+        DOY_all = [x.timetuple().tm_yday for x in pd.to_datetime(da.values)]
+    return DOY_all
