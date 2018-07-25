@@ -359,11 +359,12 @@ def BrierSkillScore(da_mod_sip=None, da_obs_ip=None,
 
 
 
-def _lrm(x=None, y=None):
+def _lrm(x=None, y=None, pyear=None):
     '''wrapper that returns the predicted values from a linear regression fit of x and y'''
     # TODO remove hardcoded 2018 (was not passing more then 2 arg???)
+    
     slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-    predict_y = intercept + slope * 2018
+    predict_y = intercept + slope * pyear
     return predict_y
 
 
@@ -372,9 +373,9 @@ def linearRegressionModel(obj, xdim, pyear):
                              dims=xdim,
                              coords={xdim: obj[xdim]},
                              name=xdim)
-    predictant = xr.apply_ufunc(_lrm, time_nums, obj,
+    predictant = xr.apply_ufunc(_lrm, time_nums, obj, pyear,
                            vectorize=True,
-                           input_core_dims=[[xdim], [xdim]],
+                           input_core_dims=[[xdim], [xdim], []],
                            output_core_dims=[[]],
                            output_dtypes=[np.float],
                            dask='parallelized')
@@ -383,9 +384,18 @@ def linearRegressionModel(obj, xdim, pyear):
 
 def _remove_trend(x, y):
     '''wrapper that removes the trend from a linear regression fit of x and y'''
-    slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
-    detrend_y = y - (slope * x + intercept)
-    return detrend_y
+    
+    # Drop indices where both x and y are missing
+    nonans = np.logical_or(np.isnan(x), np.isnan(y))
+    x_nonans = x[~nonans]
+    y_nonans = y[~nonans]
+    
+    if y_nonans.size == 0:
+        return y  # Return original y, because all values were missing
+    else:
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x_nonans, y_nonans)
+        detrend_y = y - (slope * x + intercept)
+        return detrend_y
 
 def detrend(obj, xdim):
     time_nums = xr.DataArray(obj[xdim].values.astype(np.float),
