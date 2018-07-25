@@ -20,7 +20,7 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n esio python=$TRAVIS_PYTHON_VERSION xarray seaborn cartopy matplotlib scipy
+  - conda create -q -n esio python=$TRAVIS_PYTHON_VERSION xarray seaborn cartopy matplotlib scipy pytest
   - source activate esio
   - conda install -y -c conda-forge esmpy
   - pip install xesmf
