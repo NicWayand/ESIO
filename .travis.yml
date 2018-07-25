@@ -24,7 +24,7 @@ install:
   - source activate esio
   - conda install -y -c conda-forge esmpy
   - pip install xesmf
-  - python setup.py install
+  - pip install -e .
 
 script:
   pytest ./tests/test.py
