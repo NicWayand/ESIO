@@ -1,7 +1,7 @@
 language: python
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
-  - "3.6.4"
+  - "3.6"
 install:
   - sudo apt-get update
   # We do this conditionally because it saves us some downloading if the
@@ -20,7 +20,7 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n esio python=$TRAVIS_PYTHON_VERSION --file requirements_esio.txt
+  - conda create -q -n esio python=$TRAVIS_PYTHON_VERSION xarray seaborn cartopy matplotlib scipy 
   - source activate esio
   - python setup.py install
 
