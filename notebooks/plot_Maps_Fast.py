@@ -90,12 +90,6 @@ def get_figure_init_times(fig_dir):
 # In[ ]:
 
 
-# get_figure_init_times( os.path.join(ed.EsioData.load().fig_dir, 'model', 'all_model', 'sic', 'maps_weekly'))
-
-
-# In[ ]:
-
-
 def update_status(ds_status=None, fig_dir=None, int_2_days_dict=None, NweeksUpdate=3):
     # Get list of all figures
     fig_files = glob.glob(os.path.join(fig_dir,'*.png'))
@@ -124,7 +118,7 @@ def Update_PanArctic_Maps():
     variables = ['sic']
     metrics_all = {'sic':['anomaly','mean','SIP'], 'hi':['mean']}
     #metrics_all = {'sic':['SIP']}
-    updateAll = False
+    updateAll = True
     # Some models are terrible/have serious issues, so don't include in MME
     MME_NO = ['hcmr']
 
@@ -134,9 +128,9 @@ def Update_PanArctic_Maps():
     cd = datetime.datetime(cd.year, cd.month, cd.day) # Set hour min sec to 0. 
     # Hardcoded start date (makes incremental weeks always the same)
     start_t = datetime.datetime(1950, 1, 1) # datetime.datetime(1950, 1, 1)
-    # Parms for this plot
-    Ndays = 7 # time period to aggregate maps to
-    Npers = 14 # number of periods to plot (from current date)
+    # Params for this plot
+    Ndays = 7 # time period to aggregate maps to (default is 7)
+    Npers = 32 # number of periods to plot (from current date) (default is 14)
     init_slice = np.arange(start_t, cd, datetime.timedelta(days=Ndays)).astype('datetime64[ns]')
     init_slice = init_slice[-Npers:] # Select only the last Npers of periods (weeks) since current date
 
@@ -158,6 +152,8 @@ def Update_PanArctic_Maps():
     #############################################################
 
     E = ed.EsioData.load()
+    mod_dir = E.model_dir
+    
     # Get median ice edge by DOY
     median_ice_fill = xr.open_mfdataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'ice_edge.nc')).sic
     # Get mean sic by DOY
@@ -165,7 +161,18 @@ def Update_PanArctic_Maps():
     # Get average sip by DOY
     mean_1980_2010_SIP = xr.open_dataset(os.path.join(E.obs_dir, 'NSIDC_0051', 'agg_nc', 'hist_SIP_1980_2010.nc')).sip    
     
-    # Get current observations
+    # Climatology model
+    cmod = 'climatology'
+    all_files = os.path.join(mod_dir,cmod,runType,'sipn_nc', str(cd.year)+'*.nc')
+    files = glob.glob(all_files)
+
+    obs_clim_model = xr.open_mfdataset(sorted(files), 
+            chunks={'time': 30, 'x': 304, 'y': 448},  
+             concat_dim='time', autoclose=True, parallel=True)
+    
+    obs_clim_model = obs_clim_model['sic']
+    
+    # Get recent observations
     ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'_yearly/*.nc', concat_dim='time', autoclose=True, parallel=True)#,
 
     # Define models to plot
@@ -174,7 +181,7 @@ def Update_PanArctic_Maps():
     models_2_plot = [x for x in models_2_plot if E.icePredicted[x]] # Only predictive models
 
     # Get # of models and setup subplot dims
-    Nmod = len(models_2_plot) + 2 #(+2 for obs and MME)
+    Nmod = len(models_2_plot) + 3 #(+3 for obs, MME, and clim)
     Nr = int(np.floor(np.sqrt(Nmod)))
     Nc = int(np.ceil(Nmod/Nr))
     assert Nc*Nr>=Nmod, 'Need more subplots'
@@ -187,7 +194,9 @@ def Update_PanArctic_Maps():
             os.makedirs(fig_dir)
 
         # Make requested dataArray as specified above
-        ds_status = xr.DataArray(np.ones((init_slice.size, da_slices.size))*np.NaN, dims=('init_time','fore_time'), coords={'init_time':init_slice,'fore_time':da_slices}) 
+        ds_status = xr.DataArray(np.ones((init_slice.size, da_slices.size))*np.NaN, 
+                                 dims=('init_time','fore_time'), 
+                                 coords={'init_time':init_slice,'fore_time':da_slices}) 
         ds_status.name = 'status'
         ds_status = ds_status.to_dataset()
 
@@ -206,19 +215,19 @@ def Update_PanArctic_Maps():
         for it in ds_status.init_time.values: 
             print(it)
             it_start = it-np.timedelta64(Ndays,'D') # Start period for init period (it is end of period)
-
+            
             # For each forecast time we haven't plotted yet
             ft_to_plot = ds_status.sel(init_time=it)
             ft_to_plot = ft_to_plot.where(ft_to_plot.isnull(), drop=True).fore_time
             for ft in ft_to_plot.values: 
                 print(ft.astype('timedelta64[D]'))
-                cs_str = format(days_2_int_dict[ft], '02')
-                week_str = format(int(ft.astype('timedelta64[D]').astype('int')/Ndays) , '02')
-                cdoy_end = pd.to_datetime(it + ft).timetuple().tm_yday
-                cdoy_start = pd.to_datetime(it_start + ft).timetuple().tm_yday
-                it_yr = str(pd.to_datetime(it).year)
+                cs_str = format(days_2_int_dict[ft], '02') # Get index of current forcast week
+                week_str = format(int(ft.astype('timedelta64[D]').astype('int')/Ndays) , '02') # Get string of current week
+                cdoy_end = pd.to_datetime(it + ft).timetuple().tm_yday # Get current day of year end for valid time
+                cdoy_start = pd.to_datetime(it_start + ft).timetuple().tm_yday  # Get current day of year end for valid time
+                it_yr = str(pd.to_datetime(it).year) 
                 it_m = str(pd.to_datetime(it).month)
-
+                
                 # Get datetime64 of valid time start and end
                 valid_start = it_start + ft
                 valid_end = it + ft
@@ -314,15 +323,65 @@ def Update_PanArctic_Maps():
                             axes[ax_num].set_title('Hist. Obs.')
 
                     ############################################################################
-                    #                               MODELS                                     #
+                    #                    Plot climatology trend                                #
                     ############################################################################
-                            
-                            
+                    
+                    i = 2
+                    cmod = 'climatology'
+                    axes[i].set_title('clim. trend')
+                
+                    # Check if we have any valid times in range of target dates
+                    ds_model = obs_clim_model.where((obs_clim_model.time>=valid_start) & (obs_clim_model.time<=valid_end), drop=True) 
+                    ds_model.coords['lat'] = ds_model.lat.isel(time=0).drop('time') # Drop time from lat/lon dims (not sure why?)
+                    if ds_model.time.size == 0:
+                        print("no time found for target period.")
+                        continue
+
+                    # Average over time
+                    ds_model = ds_model.mean(dim='time')
+                    
+                    if metric=='mean': # Calc ensemble mean
+                        ds_model = ds_model
+                    elif metric=='SIP': # Calc probability
+                        # Issue of some ensemble members having missing data
+                        ocnmask = ds_model.notnull()
+                        ds_model = (ds_model>=0.15).where(ocnmask)
+                    elif metric=='anomaly': # Calc anomaly in reference to mean observed 1980-2010
+                        ds_model = ds_model - da_obs_mean
+                        # Add back lat/long (get dropped because of round off differences)
+                        ds_model['lat'] = da_obs_mean.lat
+                        ds_model['lon'] = da_obs_mean.lon
+                    else:
+                        raise ValueError('metric not implemented')   
+
+                    ds_model = ds_model.drop(['doy','xm','ym'])
+                    
+                    # Build MME    
+                    if cmod not in MME_NO: # Exclude some models (bad) from MME
+                        ds_model.coords['model'] = cmod
+                        MME_list.append(ds_model)
+
+                    # Plot
+                    p = ds_model.plot.pcolormesh(ax=axes[i], x='lon', y='lat', 
+                                          transform=ccrs.PlateCarree(),
+                                          add_colorbar=False,
+                                          cmap=cmap_c,
+                                          vmin=c_vmin, vmax=c_vmax)
+
+                    axes[i].set_title('clim. trend')
+
+                    # Clean up for current model
+                    ds_model = None                   
+                        
+                    ###########################################################
+                    #                     Plot Models in SIPN format          #
+                    ###########################################################
+                    
                     # Plot all Models
                     p = None # initlaize to know if we found any data
                     for (i, cmod) in enumerate(models_2_plot):
                         print(cmod)
-                        i = i+2 # shift for obs and MME
+                        i = i+3 # shift for obs, MME, and clim
                         axes[i].set_title(E.model[cmod]['model_label'])
 
                         # Load in Model
@@ -332,25 +391,20 @@ def Update_PanArctic_Maps():
                         # Check we have files 
                         files = glob.glob(all_files)
                         if not files:
-                            #print("Skipping model", cmod, "no forecast files found.")
                             continue # Skip this model
 
                         # Load in model    
-                        #start_time = timeit.default_timer()
                         ds_model = xr.open_mfdataset(sorted(files), 
                                                      chunks={'fore_time': 1, 'init_time': 1, 'nj': 304, 'ni': 448},  
                                                      concat_dim='init_time', autoclose=True, parallel=True)
                         ds_model.rename({'nj':'x', 'ni':'y'}, inplace=True)
-                        #print("Loading took  ", (timeit.default_timer() - start_time), " seconds.")
 
                         # Select init period and fore_time of interest
-                        #start_time = timeit.default_timer()
                         ds_model = ds_model.sel(init_time=slice(it_start, it))
                         # Check we found any init_times in range
                         if ds_model.init_time.size==0:
                             print('init_time not found.')
                             continue
-                        #print("Selecting init_time took  ", (timeit.default_timer() - start_time), " seconds.")
 
                         # Select var of interest (if available)
                         if cvar in ds_model.variables:
@@ -360,7 +414,6 @@ def Update_PanArctic_Maps():
                             print('cvar not found.')
                             continue
 
-                        #start_time = timeit.default_timer()
                         # Get Valid time
                         ds_model = import_data.get_valid_time(ds_model)
 
@@ -373,15 +426,6 @@ def Update_PanArctic_Maps():
                         # Average over for_time and init_times
                         ds_model = ds_model.mean(dim=['fore_time','init_time'])
 
-    #                     if ft in ds_model.fore_time.values:
-    #                         ds_model = ds_model.sel(fore_time=ft)
-    #                     else:
-    #                         print('fore_time not found.')
-    #                         continue
-                        #print("Selecting fore_time took ", (timeit.default_timer() - start_time), " seconds.")
-
-                        #start_time = timeit.default_timer()
-        #                 print("Found data for model ", cmod, ". Plotting...")    
                         if metric=='mean': # Calc ensemble mean
                             ds_model = ds_model.mean(dim='ensemble')
                         elif metric=='SIP': # Calc probability
@@ -398,10 +442,15 @@ def Update_PanArctic_Maps():
                             raise ValueError('metric not implemented')
                         #print("Calc metric took  ", (timeit.default_timer() - start_time), " seconds.")
 
-                        # Build MME
+                        # drop ensemble if still present
                         if 'ensemble' in ds_model:
                             ds_model = ds_model.drop('ensemble')
+                            
+                        # Build MME    
                         if cmod not in MME_NO: # Exclude some models (bad) from MME
+                            ds_model.coords['model'] = cmod
+                            if 'xm' in ds_model:
+                                ds_model = ds_model.drop(['xm','ym']) #Dump coords we don't use
                             MME_list.append(ds_model)
 
                         # Plot
@@ -430,14 +479,18 @@ def Update_PanArctic_Maps():
 
                     # MME
                     ax_num = 1
+                    
                     if MME_list: # If we had any models for this time
                         # Concat over all models
                         ds_MME = xr.concat(MME_list, dim='model')
-                        # Take average
-                        ds_MME = ds_MME.mean(dim='model')
-                        # Mask out using OBSERVED LAND MASK
-                        # TODO: should happen if all models have land mask.... fix upstream
-                        pmme = ds_MME.plot.pcolormesh(ax=axes[ax_num], x='lon', y='lat', 
+                        # Set lat/lon to "model" lat/lon (round off differences)
+                        if 'model' in ds_MME.lat.dims:
+                            ds_MME.coords['lat'] = ds_MME.lat.isel(model=0).drop('model')
+                               
+                        # Plot average
+                        # Don't include some models (i.e. climatology)
+                        mod_to_avg = [m for m in ds_MME.model.values if m not in ['climatology']]
+                        pmme = ds_MME.sel(model=mod_to_avg).mean(dim='model').plot.pcolormesh(ax=axes[ax_num], x='lon', y='lat', 
                                                       transform=ccrs.PlateCarree(),
                                                       add_colorbar=False, 
                                                       cmap=cmap_c,vmin=c_vmin, vmax=c_vmax)
@@ -448,6 +501,47 @@ def Update_PanArctic_Maps():
     #                                                                           linewidths=[0.5],
     #                                                                           levels=[0.5])
                             #remove_small_contours(po, thres=10)
+        
+                        # Save all models for given target valid_time
+                        out_metric_dir = os.path.join(E.model['MME'][runType]['sipn_nc'], metric)
+                        if not os.path.exists(out_metric_dir):
+                            os.makedirs(out_metric_dir) 
+                            
+                        out_init_dir = os.path.join(out_metric_dir, pd.to_datetime(it).strftime('%Y-%m-%d'))
+                        if not os.path.exists(out_init_dir):
+                            os.makedirs(out_init_dir)            
+            
+                        out_nc_file = os.path.join(out_init_dir, pd.to_datetime(it+ft).strftime('%Y-%m-%d')+'.nc')
+                            
+                        # Add observations
+                        # Check if exits (if we have any observations for this valid period)
+                        # TODO: require ALL observations to be present, otherwise we could only get one day != week avg
+                        if ds_81.sic.sel(time=slice(valid_start,valid_end)).time.size > 0:
+                            da_obs_c.coords['model'] = 'Observed'
+                            
+                            # Drop coords we don't need
+                            da_obs_c = da_obs_c.drop(['hole_mask','xm','ym'])
+                            if 'time' in da_obs_c:
+                                da_obs_c = da_obs_c.drop('time')
+                            if 'xm' in ds_MME:
+                                ds_MME = ds_MME.drop(['xm','ym'])
+                            
+                            # Add obs
+                            ds_MME_out = xr.concat([ds_MME,da_obs_c], dim='model')
+                        else: 
+                            ds_MME_out = ds_MME
+                            
+                        # Add init and valid times
+                        ds_MME_out.coords['init_start'] = it_start
+                        ds_MME_out.coords['init_end'] = it
+                        ds_MME_out.coords['valid_start'] = it_start+ft
+                        ds_MME_out.coords['valid_end'] = it+ft
+                        ds_MME_out.coords['fore_time'] = ft
+                        ds_MME_out.name = metric
+                        
+                        # Save
+                        ds_MME_out.to_netcdf(out_nc_file)
+        
                     axes[ax_num].set_title('MME')
 
                     # Make pretty
@@ -509,7 +603,6 @@ def Update_PanArctic_Maps():
         json.dump(json_dict, outfile)
 
     # Make into Gifs
-    # TODO fig_dir hardcoded to current variable
     for cit in json_format:
         subprocess.call(str("/home/disk/sipn/nicway/python/ESIO/scripts/makeGif.sh " + fig_dir + " " + cit), shell=True)
 
