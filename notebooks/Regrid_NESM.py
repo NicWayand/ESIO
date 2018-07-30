@@ -58,7 +58,7 @@ sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 E = ed.EsioData.load()
 # Directories
-all_models=['usnavyncep','usnavysipn']
+all_models=['usnavygofs','usnavyncep','usnavysipn']
 runType='forecast'
 updateall = False
 
@@ -83,19 +83,11 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # In[6]:
 
 
-## TODO
-# - Get mask
-# - Get lat lon bounds 
-
-
-# In[7]:
-
-
 # Set models that are different
 var_dic = {'aice':'sic'}
 
 
-# In[8]:
+# In[ ]:
 
 
 for model in all_models:
@@ -109,8 +101,12 @@ for model in all_models:
     # First parse files to see what unique init_times we have
     # ARCu0.08_121_2018042112_t0300.nc
     prefix = 'ARCu0'
-    all_files = glob.glob(os.path.join(data_dir, prefix+'*.nc'))
-    init_times = list(set([s.split('_')[2] for s in all_files]))
+    all_files = glob.glob(os.path.join(data_dir, '*'+prefix+'*.nc'))
+    if model=='usnavygofs':
+        init_N = 4
+    else:
+        init_N = 2
+    init_times = list(set([s.split('_')[init_N] for s in all_files]))
     
     print("Found ",len(init_times)," initialization times.")
     if updateall:
@@ -136,23 +132,38 @@ for model in all_models:
                 print("Skipping ", cf, " already imported.")
                 continue # Skip, file already imported
 
-        c_files = sorted(glob.glob(os.path.join(data_dir, prefix+'*_'+cf+'*.nc')))
-        ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=False)
+        c_files = sorted(glob.glob(os.path.join(data_dir, '*'+prefix+'*_'+cf+'*.nc')))
+        
+        
+        #def nrl_time_import(x):
+            
+        
+        # Some files have a "tau" variable that is hours since analysis
+        try:
+            ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=False, autoclose=True)
 
+            # Format times
+            ds.coords['init_time'] = np.datetime64(ds.tau.attrs['time_origin'])
+            ds.coords['tau'] = ds.tau
+            ds.swap_dims({'time':'tau'}, inplace=True)
+            ds.rename({'tau':'fore_time'}, inplace=True)
+            ds.fore_time.attrs['units'] = 'Forecast offset from initial time'
+            ds = ds.drop(['time'])
+            ds.coords['fore_time'] = ds.fore_time.astype('timedelta64[h]') 
+            
+        # Some do not
+        except AttributeError:
+            
+            ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=True, autoclose=True)
+            dt_mod = ds.time.values[1] - ds.time.values[0]
+            ds.coords['init_time'] = ds.time.values[0] - dt_mod
+            ds.coords['fore_time'] = ds.time - ds.init_time
+            ds.swap_dims({'time':'fore_time'}, inplace=True);
+            ds = ds.drop('time')
+            
         # Rename variables per esipn guidelines
         ds.rename(var_dic, inplace=True);
-
-        # Format times
-        ds.coords['init_time'] = np.datetime64(ds.tau.attrs['time_origin'])
-        ds.coords['tau'] = ds.tau
-
-        ds.swap_dims({'time':'tau'}, inplace=True)
-        ds.rename({'tau':'fore_time'}, inplace=True)
-        ds.fore_time.attrs['units'] = 'Forecast offset from initial time'
-        ds = ds.drop(['time'])
-        ds.coords['fore_time'] = ds.fore_time.astype('timedelta64[h]') 
-        #ds.coords['valid_time'] = ds.fore_time + ds.init_time
-
+        
         # Apply masks (if available)
         if ds_mask:
             print('found mask')
@@ -187,7 +198,7 @@ for model in all_models:
         print('Saved ', f_out)
 
 
-# In[9]:
+# In[ ]:
 
 
 # Clean up
@@ -197,7 +208,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[10]:
+# In[ ]:
 
 
 # sic_all = xr.open_mfdataset(f_out)

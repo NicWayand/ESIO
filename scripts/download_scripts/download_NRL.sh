@@ -33,8 +33,8 @@ mkdir -p $NSIDC_NRL_DATA_DIR
 
 # Download
 cd $NSIDC_NRL_DATA_DIR
-wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ARC*121*.gz" -N $data_ftp
-wget --no-check-certificate --user=nrltransfer --password=NESM2017! -nH --cut-dirs=20 -r -A "ANT*121*.gz" -N $data_ftp
+wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=20 -r -A "ARC*121*.gz" -N $data_ftp
+wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=20 -r -A "ANT*121*.gz" -N $data_ftp
 
 # Unzip files
 cd $REPO_DIR/scripts/download_scripts/

@@ -20,18 +20,15 @@ def test_BSS(da_sip=da_sip, da_obs=da_obs):
     
     # Case Model says SIP=1 and Obs=1, BSS = 0
     BSS = metrics._BSS(mod=da_sip.isel(model=0), 
-                       obs=da_obs, 
-                       time_dim='valid_time')
-    assert BSS == 0
+                       obs=da_obs)
+    assert BSS.mean(dim='valid_time') == 0
     
     # Case Model says SIP=1 and Obs=1, BSS = 0
     BSS = metrics._BSS(mod=da_sip.isel(model=0)*0, 
-                       obs=da_obs, 
-                       time_dim='valid_time')
-    assert BSS == 1
+                       obs=da_obs)
+    assert BSS.mean(dim='valid_time') == 1
     
     # Case Model says SIP=1 and Obs=1, BSS = 0
     BSS = metrics._BSS(mod=da_sip.isel(model=0)*0.5, 
-                       obs=da_obs, 
-                       time_dim='valid_time')
-    assert BSS == (0.5)**2
+                       obs=da_obs)
+    assert BSS.mean(dim='valid_time') == (0.5)**2

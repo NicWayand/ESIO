@@ -306,11 +306,12 @@ def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=Fa
     
     return IIEE
 
-def _BSS(mod=None, obs=None, time_dim='time'):
-    return ((mod-obs)**2).mean(dim=time_dim)
+def _BSS(mod=None, obs=None):
+    return ((mod-obs)**2) #.mean(dim=time_dim)
 
-def BrierSkillScore(da_mod_sip=None, da_obs_ip=None, 
-                    time_dim='valid_time', region=None, 
+def BrierSkillScore(da_mod_sip=None, 
+                    da_obs_ip=None, 
+                    region=None, 
                     testplots=False):
     '''
     Brier Skill Score
@@ -344,8 +345,7 @@ def BrierSkillScore(da_mod_sip=None, da_obs_ip=None,
         
     # Calculate Brier Skill Score
     BSS = _BSS(mod = da_mod_sip, 
-               obs = da_obs_ip,
-               time_dim = time_dim)
+               obs = da_obs_ip)
     
     if testplots:
         plt.figure()

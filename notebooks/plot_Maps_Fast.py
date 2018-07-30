@@ -118,7 +118,7 @@ def Update_PanArctic_Maps():
     variables = ['sic']
     metrics_all = {'sic':['anomaly','mean','SIP'], 'hi':['mean']}
     #metrics_all = {'sic':['SIP']}
-    updateAll = True
+    updateAll = False
     # Some models are terrible/have serious issues, so don't include in MME
     MME_NO = ['hcmr']
 
@@ -130,7 +130,7 @@ def Update_PanArctic_Maps():
     start_t = datetime.datetime(1950, 1, 1) # datetime.datetime(1950, 1, 1)
     # Params for this plot
     Ndays = 7 # time period to aggregate maps to (default is 7)
-    Npers = 32 # number of periods to plot (from current date) (default is 14)
+    Npers = 29 # number of periods to plot (from current date) (default is 14)
     init_slice = np.arange(start_t, cd, datetime.timedelta(days=Ndays)).astype('datetime64[ns]')
     init_slice = init_slice[-Npers:] # Select only the last Npers of periods (weeks) since current date
 
@@ -177,13 +177,16 @@ def Update_PanArctic_Maps():
 
     # Define models to plot
     models_2_plot = list(E.model.keys())
-    models_2_plot = [x for x in models_2_plot if x!='piomas'] # remove some models
+    models_2_plot = [x for x in models_2_plot if x not in ['piomas','MME','uclsipn']] # remove some models
     models_2_plot = [x for x in models_2_plot if E.icePredicted[x]] # Only predictive models
 
     # Get # of models and setup subplot dims
-    Nmod = len(models_2_plot) + 3 #(+3 for obs, MME, and clim)
-    Nr = int(np.floor(np.sqrt(Nmod)))
-    Nc = int(np.ceil(Nmod/Nr))
+    Nmod = len(models_2_plot) + 4#(+3 for obs, MME, and clim)
+    Nc = int(np.floor(np.sqrt(Nmod)))
+    # Max number of columns == 5 (plots get too small otherwise)
+    Nc = np.min([Nc,5])
+    Nr = int(np.ceil(Nmod/Nc))
+    print(Nr, Nc, Nmod)
     assert Nc*Nr>=Nmod, 'Need more subplots'
 
     for cvar in variables:
@@ -332,43 +335,49 @@ def Update_PanArctic_Maps():
                 
                     # Check if we have any valid times in range of target dates
                     ds_model = obs_clim_model.where((obs_clim_model.time>=valid_start) & (obs_clim_model.time<=valid_end), drop=True) 
-                    ds_model.coords['lat'] = ds_model.lat.isel(time=0).drop('time') # Drop time from lat/lon dims (not sure why?)
-                    if ds_model.time.size == 0:
-                        print("no time found for target period.")
-                        continue
-
-                    # Average over time
-                    ds_model = ds_model.mean(dim='time')
+                    if 'time' in ds_model.lat.dims:
+                        ds_model.coords['lat'] = ds_model.lat.isel(time=0).drop('time') # Drop time from lat/lon dims (not sure why?)
                     
-                    if metric=='mean': # Calc ensemble mean
-                        ds_model = ds_model
-                    elif metric=='SIP': # Calc probability
-                        # Issue of some ensemble members having missing data
-                        ocnmask = ds_model.notnull()
-                        ds_model = (ds_model>=0.15).where(ocnmask)
-                    elif metric=='anomaly': # Calc anomaly in reference to mean observed 1980-2010
-                        ds_model = ds_model - da_obs_mean
-                        # Add back lat/long (get dropped because of round off differences)
-                        ds_model['lat'] = da_obs_mean.lat
-                        ds_model['lon'] = da_obs_mean.lon
-                    else:
-                        raise ValueError('metric not implemented')   
+                    # If we have any time
+                    if ds_model.time.size > 0:
 
-                    ds_model = ds_model.drop(['doy','xm','ym'])
-                    
-                    # Build MME    
-                    if cmod not in MME_NO: # Exclude some models (bad) from MME
-                        ds_model.coords['model'] = cmod
-                        MME_list.append(ds_model)
+                        # Average over time
+                        ds_model = ds_model.mean(dim='time')
 
-                    # Plot
-                    p = ds_model.plot.pcolormesh(ax=axes[i], x='lon', y='lat', 
-                                          transform=ccrs.PlateCarree(),
-                                          add_colorbar=False,
-                                          cmap=cmap_c,
-                                          vmin=c_vmin, vmax=c_vmax)
+                        if metric=='mean': # Calc ensemble mean
+                            ds_model = ds_model
+                        elif metric=='SIP': # Calc probability
+                            # Issue of some ensemble members having missing data
+                            ocnmask = ds_model.notnull()
+                            ds_model = (ds_model>=0.15).where(ocnmask)
+                        elif metric=='anomaly': # Calc anomaly in reference to mean observed 1980-2010
+                            ds_model = ds_model - da_obs_mean
+                            # Add back lat/long (get dropped because of round off differences)
+                            ds_model['lat'] = da_obs_mean.lat
+                            ds_model['lon'] = da_obs_mean.lon
+                        else:
+                            raise ValueError('metric not implemented')   
 
-                    axes[i].set_title('clim. trend')
+                        if 'doy' in ds_model.coords:
+                            ds_model = ds_model.drop(['doy'])
+                        if 'xm' in ds_model.coords:
+                            ds_model = ds_model.drop(['xm'])
+                        if 'ym' in ds_model.coords:
+                            ds_model = ds_model.drop(['ym'])
+
+                        # Build MME    
+                        if cmod not in MME_NO: # Exclude some models (bad) from MME
+                            ds_model.coords['model'] = cmod
+                            MME_list.append(ds_model)
+
+                        # Plot
+                        p = ds_model.plot.pcolormesh(ax=axes[i], x='lon', y='lat', 
+                                              transform=ccrs.PlateCarree(),
+                                              add_colorbar=False,
+                                              cmap=cmap_c,
+                                              vmin=c_vmin, vmax=c_vmax)
+
+                        axes[i].set_title('clim. trend')
 
                     # Clean up for current model
                     ds_model = None                   
@@ -488,8 +497,8 @@ def Update_PanArctic_Maps():
                             ds_MME.coords['lat'] = ds_MME.lat.isel(model=0).drop('model')
                                
                         # Plot average
-                        # Don't include some models (i.e. climatology)
-                        mod_to_avg = [m for m in ds_MME.model.values if m not in ['climatology']]
+                        # Don't include some models (i.e. climatology and dampedAnomaly)
+                        mod_to_avg = [m for m in ds_MME.model.values if m not in ['climatology','dampedAnomaly']]
                         pmme = ds_MME.sel(model=mod_to_avg).mean(dim='model').plot.pcolormesh(ax=axes[ax_num], x='lon', y='lat', 
                                                       transform=ccrs.PlateCarree(),
                                                       add_colorbar=False, 
@@ -615,6 +624,8 @@ def Update_PanArctic_Maps():
 if __name__ == '__main__':
     # Start up Client
     client = Client()
+    #dask.config.set(scheduler='threads')  # overwrite default with threaded scheduler
+
     
     # Call function
     Update_PanArctic_Maps()
