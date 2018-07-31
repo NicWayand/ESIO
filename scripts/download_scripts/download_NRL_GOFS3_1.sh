@@ -40,7 +40,7 @@ wait
 
 # Unzip files
 cd $REPO_DIR/scripts/download_scripts/
-./unzip_file_nostrip.sh /home/disk/sipn/nicway/data/model/usnavygofs/forecast/native/ GOFS3.1_Arctic
+./unzip_file_nostrip.sh /home/disk/sipn/nicway/data/model/usnavygofs/forecast/native/ GOFS3.1_Arctic 
 
 echo "Done!"
 
