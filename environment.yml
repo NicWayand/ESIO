@@ -79,7 +79,6 @@ dependencies:
   - matplotlib=2.2.2=py36_1
   - mistune=0.8.3=py_0
   - more-itertools=4.2.0=py36_1
-  - mpich=3.2=5
   - mpld3=0.3=py36_0
   - msgpack-python=0.5.5=py36_0
   - multipledispatch=0.5.0=py36_0
