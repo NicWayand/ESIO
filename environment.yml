@@ -187,10 +187,8 @@ dependencies:
   - esmpy=7.1.0.dev52=py36_1
   - pip:
     - cython==0.28.4
-    - ecmwf-api-client==1.5.0
     - esio==0.0.1
     - sklearn-xarray==0.2.0
-    - sqlalchemy-utils==0.33.3
     - xesmf==0.1.1
     - xskillscore==0.0.1
 prefix: /home/disk/sipn/nicway/anaconda3/envs/esio
