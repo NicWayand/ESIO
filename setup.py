@@ -9,7 +9,7 @@ AUTHOR_EMAIL = 'nicway@gmail.com'
 URL = 'https://github.com/NicWayand/ESIO'
 LICENSE = 'GPL-3.0'
 PYTHON_REQUIRES = '>=3.5'
-INSTALL_REQUIRES = ['xesmf', 'esmpy', 'xarray', 'numpy', 'scipy', 'cartopy', 'seaborn']
+INSTALL_REQUIRES = ['esmpy', 'xarray', 'numpy', 'scipy', 'cartopy', 'seaborn','pytest', 'matplotlib']
 CLASSIFIERS = [
     'Development Status :: 1 - Beta',
     'License :: OSI Approved :: GPL-3.0 License',
