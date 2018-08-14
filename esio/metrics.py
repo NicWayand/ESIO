@@ -54,10 +54,31 @@ def agg_by_domain(da_grid=None, ds_region=None, extent_thress=0.15, fill_pole_ho
             # Multiple by cell area to get area of sea ice
             da_avg = (da_grid.where(cmask==1) >= extent_thress).astype('int') * ds_region.area.where(cmask==1)
             # Sum up over current domain and convert to millions of km^2
-            da_avg = da_avg.sum(dim='x').sum(dim='y') / (10**6)
+            da_avg = da_avg.sum(dim=['y','x']) / (10**6)
             # TODO: Add option to add in pole hole if obs and central arctic
             if fill_pole_hole:
                 raise ValueError('Not implemented')
+
+            # Add domain name
+            da_avg['nregions'] = cd
+            da_avg['region_names'] = region_name
+            ds_list.append(da_avg)
+    return xr.concat(ds_list, dim='nregions')
+
+def agg_metric_domain(da_grid=None, ds_region=None):
+
+    ds_list = []
+    for cd in ds_region.nregions.values:
+        # Get name
+        region_name = ds_region.region_names.sel(nregions=cd).values
+        # Check we want it (exclude some regions)
+        if not region_name in ['Ice-free Oceans', 'null','land outline', 'land' ]:
+            # Make mask
+            cmask = ds_region.mask==cd
+            # Mask out
+            da_avg = da_grid.where(cmask==1)
+            # Average
+            da_avg = da_avg.mean(dim=['x','y'])
 
             # Add domain name
             da_avg['nregions'] = cd

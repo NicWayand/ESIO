@@ -92,19 +92,19 @@ def preprocess_time(x):
 
     return x
 
-def get_valid_time(ds):
+def get_valid_time(ds, init_dim='init_time', fore_dim='fore_time'):
     ''' Given a data set with init_time and fore_time coords, calcuate the valid_time coord.'''
     
     if 'fore_offset' in ds.coords:
         # Then fore_time is just an index for fore_offset (i.e. monthly data)
         # TODO remove hard corded months (get from fore_offset)
-        fore_time_offset = np.array([relativedelta(months=+x) for x in ds.fore_time.values])
+        fore_time_offset = np.array([relativedelta(months=+x) for x in ds[fore_dim].values])
         # Switch types around so we can add datetime64[ns] with an object of relativedelta, then convert back
         #valid_time = xr.DataArray(np.array([ds.init_time.values.astype('M8[D]').astype('O')]), dims='init_time')  +  xr.DataArray(fore_time_offset, dims='fore_time')
-        valid_time = xr.DataArray(ds.init_time.values.astype('M8[D]').astype('O'), dims='init_time') +  xr.DataArray(fore_time_offset, dims='fore_time')
+        valid_time = xr.DataArray(ds[init_dim].values.astype('M8[D]').astype('O'), dims=init_dim) +  xr.DataArray(fore_time_offset, dims='fore_time')
         ds.coords['valid_time'] = valid_time.astype('datetime64[ns]')
     else:
-        ds.coords['valid_time'] = ds.init_time + ds.fore_time
+        ds.coords['valid_time'] = ds[init_dim] + ds[fore_dim]
         
     return ds
 

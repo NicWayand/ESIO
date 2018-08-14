@@ -40,12 +40,15 @@ fi
 # Model downloads
 python $REPO_DIR"/scripts/download_scripts/Download_s2s.py" "recent" 
 failfunction "$?" "Download_s2s.py had an Error. See log." 
+
 python $REPO_DIR"/scripts/download_scripts/Download_C3S.py" "recent" 
 failfunction "$?" "Download_C3S.py had an Error. See log." 
+
 $REPO_DIR"/scripts/download_scripts/download_RASM_ESRL.sh" 
-failfunction "$?" "download_RASM_ESRL.py had an Error. See log." 
+failfunction "$?" "download_RASM_ESRL.py had an Error. See log."
+
 $REPO_DIR"/scripts/download_scripts/download_NRL_GOFS3_1.sh"
-failfunction "$?" "download_NRL_GOFS3_1.sh had an Error. See log."
+#failfunction "$?" "download_NRL_GOFS3_1.sh had an Error. See log."
 
 wait # Below depends on above
 

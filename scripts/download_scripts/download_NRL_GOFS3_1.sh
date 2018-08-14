@@ -33,12 +33,11 @@ mkdir -p $NSIDC_NRL_GOFS_DATA_DIR
 
 # Download
 cd $NSIDC_NRL_GOFS_DATA_DIR
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=20 -r -A "GOFS3.1_Antarctic_*.gz" -N $data_ftp
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=20 -r -A "GOFS3.1_Arctic_*.gz" -N $data_ftp
-
-wait
+wget robots=off --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=20 -r -A "GOFS3.1_Antarctic_*.gz" -N $data_ftp
+wget robots=off --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=20 -r -A "GOFS3.1_Arctic_*.gz" -N $data_ftp
 
 # Unzip files
+echo "UNTARING FILES!"
 cd $REPO_DIR/scripts/download_scripts/
 ./unzip_file_nostrip.sh /home/disk/sipn/nicway/data/model/usnavygofs/forecast/native/ GOFS3.1_Arctic 
 

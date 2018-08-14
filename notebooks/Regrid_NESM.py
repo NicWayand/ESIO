@@ -87,7 +87,7 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 var_dic = {'aice':'sic'}
 
 
-# In[ ]:
+# In[9]:
 
 
 for model in all_models:

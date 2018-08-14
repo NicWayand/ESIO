@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -25,7 +25,7 @@ GNU General Public License v3.0
 # - Saves to netcdf files grouped by year
 
 
-# In[ ]:
+# In[2]:
 
 
 
@@ -56,9 +56,10 @@ import dask
 # ESIO Imports
 from esio import EsioData as ed
 from esio import import_data
+from esio import ice_plot
 
 
-# In[ ]:
+# In[3]:
 
 
 # from dask.distributed import Client
@@ -66,7 +67,7 @@ from esio import import_data
 # client
 
 
-# In[ ]:
+# In[4]:
 
 
 # General plotting settings
@@ -74,21 +75,21 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[5]:
 
 
 E = ed.EsioData.load()
 # Directories
-all_models = [ 'ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
+all_models = ['ecmwfsipn','ukmetofficesipn','bom', 'ncep', 'ukmo', 
               'eccc', 'kma', 'cma', 'ecmwf', 'hcmr', 'isaccnr',
               'jma', 'metreofr'] 
-# all_models = [ 'metreofr']
+# all_models = [ 'ukmetofficesipn']
 updateall = False
 cvar = 'sic'
 stero_grid_file = E.obs['NSIDC_0051']['grid']
 
 
-# In[ ]:
+# In[6]:
 
 
 obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
@@ -97,14 +98,14 @@ obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[ ]:
+# In[7]:
 
 
 # Regridding Options
 method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[ ]:
+# In[8]:
 
 
 # Store dictionary to convert each model variable names to sipn syntax
@@ -130,14 +131,14 @@ var_dic['ecmwfsipn'] = {'.*CI_GDS0_SFC':'sic'}
 monthly_init_model = ['ecmwfsipn', 'ukmetofficesipn', 'metreofr']
 
 
-# In[ ]:
+# In[9]:
 
 
 ## TODO
 # - Get lat lon bounds 
 
 
-# In[ ]:
+# In[10]:
 
 
 def test_plot():
@@ -180,7 +181,7 @@ def test_plot():
     ax1.set_title('Target Grid')
 
 
-# In[ ]:
+# In[11]:
 
 
 # For both forecast and reforecast
@@ -216,7 +217,7 @@ for runType in ['forecast','reforecast']:
 
         # Load land/sea mask file
         if model_grid_file.split('/')[-1]!='MISSING':
-            ds_mask = xr.open_dataset(model_grid_file)
+            ds_mask = xr.open_mfdataset(model_grid_file, autoclose=True)
         else:
             ds_mask = None
 
@@ -259,7 +260,7 @@ for runType in ['forecast','reforecast']:
                 # (1-land_mask) is fraction ocean
                 # Multiply sic by fraction ocean to get actual native grid cell sic
                 # Also mask land out where land_mask==1
-                ds[cvar] = ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
+                ds[cvar] = ds[cvar] * (1 - ds_mask.land_mask.where(ds_mask.land_mask<0.5)) # Use 50% thresshold for ocean area vs land area
 
 
         #     # Set sic below 0 to 0
@@ -295,6 +296,7 @@ for runType in ['forecast','reforecast']:
             var_out = import_data.expand_to_sipn_dims(var_out)
 
             #test_plot()
+            #xr.exit()
 
             # # Save regridded to netcdf file
             var_out.to_netcdf(f_out)
@@ -312,7 +314,7 @@ for runType in ['forecast','reforecast']:
             regridder.clean_weight_file()  # clean-up    
 
 
-# In[ ]:
+# In[12]:
 
 
 # cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10))
@@ -327,7 +329,7 @@ for runType in ['forecast','reforecast']:
 #                                      cmap='Blues')
 
 
-# In[ ]:
+# In[13]:
 
 
 # cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10))
@@ -367,7 +369,7 @@ for runType in ['forecast','reforecast']:
 # ax1.set_title('Target Grid')
 
 
-# In[ ]:
+# In[14]:
 
 
 

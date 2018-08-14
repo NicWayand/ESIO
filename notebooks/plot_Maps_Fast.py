@@ -177,7 +177,7 @@ def Update_PanArctic_Maps():
 
     # Define models to plot
     models_2_plot = list(E.model.keys())
-    models_2_plot = [x for x in models_2_plot if x not in ['piomas','MME','uclsipn']] # remove some models
+    models_2_plot = [x for x in models_2_plot if x not in ['piomas','MME','MME_NEW','uclsipn']] # remove some models
     models_2_plot = [x for x in models_2_plot if E.icePredicted[x]] # Only predictive models
 
     # Get # of models and setup subplot dims
@@ -217,12 +217,16 @@ def Update_PanArctic_Maps():
         start_time_cmod = timeit.default_timer()
         for it in ds_status.init_time.values: 
             print(it)
-            it_start = it-np.timedelta64(Ndays,'D') # Start period for init period (it is end of period)
+            it_start = it-np.timedelta64(Ndays,'D') + np.timedelta64(1,'D') # Start period for init period (it is end of period). Add 1 day because when
+            # we select using slice(start,stop) it is inclusive of end points. So here we are defining the start of the init AND the start of the valid time.
+            # So we need to add one day, so we don't double count. 
             
             # For each forecast time we haven't plotted yet
             ft_to_plot = ds_status.sel(init_time=it)
             ft_to_plot = ft_to_plot.where(ft_to_plot.isnull(), drop=True).fore_time
+            
             for ft in ft_to_plot.values: 
+                
                 print(ft.astype('timedelta64[D]'))
                 cs_str = format(days_2_int_dict[ft], '02') # Get index of current forcast week
                 week_str = format(int(ft.astype('timedelta64[D]').astype('int')/Ndays) , '02') # Get string of current week
@@ -589,21 +593,8 @@ def Update_PanArctic_Maps():
             # Done with current it
             print("Took ", (timeit.default_timer() - start_time_cmod)/60, " minutes.")
 
-    # Down with plots now:
-    # 1) Update json file
-    # 2) Update gifs
-
-#     # Make requested dataArray as specified above
-#     ds_status = xr.DataArray(np.ones((init_slice.size, da_slices.size))*np.NaN, dims=('init_time','fore_time'), coords={'init_time':init_slice,'fore_time':da_slices}) 
-#     ds_status.name = 'status'
-#     ds_status = ds_status.to_dataset()
-
-#     # Check what plots we already have
-#     if ~updateAll:
-#         ds_status = update_status(ds_status=ds_status, fig_dir=fig_dir, int_2_days_dict=int_2_days_dict)
-#         print(ds_status.status.values)
-
-
+    
+    # Update json file
     json_format = get_figure_init_times(fig_dir)
     json_dict = [{"date":cd,"label":cd} for cd in json_format]
 
