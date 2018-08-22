@@ -9,7 +9,7 @@
 Collection of scripts for running the [SIPN2 Portal](http://www.atmos.uw.edu/sipn)
 
 <p align="center">
-  <img src="https://atmos.washington.edu/sipn/figures/model/all_model/sic/timeseries/panArctic_extent_forecast_raw_predicted.png?342038402" width="350"/>
+  <img src="https://atmos.washington.edu/sipn/figures/model/all_model/sic/timeseries/panArctic_extent_forecast_raw_predicted.png?342038402" width="800"/>
 </p>
 
 - [notebooks](./notebooks/) contain ipython notebooks and converted .py files for:
