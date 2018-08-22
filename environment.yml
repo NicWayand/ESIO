@@ -10,5 +10,3 @@ dependencies:
   - dask
   - matplotlib
   - seaborn
-  - pip:
-    - esio==0.0.1
