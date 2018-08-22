@@ -6,6 +6,9 @@ dependencies:
   - numpy
   - pandas
   - gcsfs
-  - xarray
+  - xarray==0.10.8
   - dask
   - matplotlib
+  - seaborn
+pip:
+ - esio==0.0.1
