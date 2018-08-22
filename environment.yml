@@ -10,5 +10,7 @@ dependencies:
   - dask
   - matplotlib
   - seaborn
+  - proj4
+  - cartopy
   - pip:
     - cython
