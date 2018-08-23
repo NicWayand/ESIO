@@ -1,7 +1,7 @@
 # Extended Sea Ice Outlook (ESIO)
 ## Part of the Sea ice Prediction Network Phase 2 (SIPN2)
 
-[![Build Status](https://travis-ci.org/NicWayand/ESIO.svg?branch=master)](https://travis-ci.org/NicWayand/ESIO) [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/NicWayand/ESIO/master?urlpath=https%3A%2F%2Fgithub.com%2FNicWayand%2FESIO%2Fblob%2Fmaster%2Fnotebooks%2FExample_plot_SIPN2_data.ipynb)
+[![Build Status](https://travis-ci.org/NicWayand/ESIO.svg?branch=master)](https://travis-ci.org/NicWayand/ESIO) [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/NicWayand/ESIO/master?filepath=notebooks%2FExample_plot_SIPN2_data.ipynb)
 
 
 
