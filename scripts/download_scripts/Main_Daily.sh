@@ -74,12 +74,15 @@ wait # Below depends on above
 python "./Calc_Model_Aggregations.py"
 failfunction "$?" "Calc_Model_Aggregations.py had an Error. See log." 
 
+# Aggregate to weekly mean, anomaly, SIP
+python "./Model_Damped_Anomaly_Persistence.py"
+failfunction "$?" "Model_Damped_Anomaly_Persistence.py had an Error. See log."
 
 # Make Plots
 # Availblity plots
 which python
-python "./plot_forecast_availability.py"
-failfunction "$?" "plot_forecast_availability.py had an Error. See log." 
+python "./plot_Maps_Fast_from_database.py"
+failfunction "$?" "plot_Maps_Fast_from_database.py had an Error. See log." 
 
 # Extents
 python "./plot_Extent_Model_Obs.py"
@@ -89,8 +92,8 @@ python "./plot_Regional_Extent.py"
 failfunction "$?" "plot_Regional_Extent.py had an Error. See log." 
 
 # Maps
-python "./plot_Maps_Fast.py" 
-failfunction "$?" "plot_Maps_Fast.py had an Error. See log." 
+python "./plot_Maps_Fast_from_database.py" 
+failfunction "$?" "plot_Maps_Fast_from_database.py had an Error. See log." 
 #python "./plot_Regional_maps.py"
 #failfunction "$?" "plot_Regional_maps.py had an Error. See log." 
 
