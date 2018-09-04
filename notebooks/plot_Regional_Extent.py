@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -54,7 +54,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 # Plotting Info
@@ -63,7 +63,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[3]:
+# In[ ]:
 
 
 # Initialization times to plot
@@ -75,7 +75,7 @@ SD = cd - datetime.timedelta(days=90)
 # ED = cd + datetime.timedelta(days=365)
 
 
-# In[4]:
+# In[ ]:
 
 
 # Info about models runs
@@ -85,7 +85,7 @@ SD = cd - datetime.timedelta(days=90)
 # biasCorrected = 
 
 
-# In[5]:
+# In[ ]:
 
 
 #############################################################
@@ -94,7 +94,7 @@ SD = cd - datetime.timedelta(days=90)
 E = ed.EsioData.load()
 
 
-# In[6]:
+# In[ ]:
 
 
 # Load obs
@@ -104,7 +104,7 @@ ds_obs = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='t
 print(timeit.default_timer() - start_time)
 
 
-# In[7]:
+# In[ ]:
 
 
 # Load in regional data
@@ -112,7 +112,7 @@ print(timeit.default_timer() - start_time)
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[8]:
+# In[ ]:
 
 
 cdate = datetime.datetime.now()
@@ -120,7 +120,7 @@ cdate = datetime.datetime.now()
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[9]:
+# In[ ]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))

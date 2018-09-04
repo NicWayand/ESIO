@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -20,7 +20,7 @@ GNU General Public License v3.0
 '''
 
 
-# In[ ]:
+# In[2]:
 
 
 # Standard Imports
@@ -54,7 +54,7 @@ from esio import EsioData as ed
 from esio import metrics
 
 
-# In[ ]:
+# In[3]:
 
 
 def Update_Model_Aggs():
@@ -64,7 +64,7 @@ def Update_Model_Aggs():
     # Directories
     # Define models to plot
     all_models = list(E.model.keys())
-    all_models = [x for x in all_models if x not in ['piomas','MME']] # remove some models
+    all_models = [x for x in all_models if x not in ['piomas','MME','MME_NEW']] # remove some models
 #     all_models = ['uclsipn']
     runType='forecast'
     updateall = False
@@ -135,12 +135,12 @@ def Update_Model_Aggs():
         print("Finished...")
 
 
-# In[ ]:
+# In[4]:
 
 
 if __name__ == '__main__':
     # Start up Client
-    client = Client(processes=12)
+    client = Client(n_workers=8)
     print(client)
     
     # Call function

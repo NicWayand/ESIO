@@ -103,7 +103,7 @@ cvar = 'sic'
 yticks1 = []
 yticklabels1 = []
 # Plot simple time line of init_times
-f = plt.figure(figsize=(15,7))
+f = plt.figure(figsize=(20,12))
 fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
 for (i_cm, c_model) in enumerate(E.model.keys()):
 # for (i_cm, c_model) in enumerate(['ukmo','gfdlsipn']):
@@ -130,9 +130,11 @@ for (i_cm, c_model) in enumerate(E.model.keys()):
 
     x = ds_model.init_time.values
     y = [i_cm for i in np.arange(0,x.size)]
+    clabel = E.model[c_model]['model_label']
+    clabel = ''.join(clabel.splitlines()) # remove any returns
     plt.scatter(x, y, s=50, 
                     facecolors=cc, edgecolors=cc, 
-                    marker=cm, label=E.model[c_model]['model_label'])
+                    marker=cm, label=clabel)
     yticks1.append(i_cm)
     yticklabels1.append(E.model[c_model]['model_label'])
 
@@ -152,7 +154,7 @@ cvar = 'sic'
 yticks1 = []
 yticklabels1 = []
 # Plot simple time line of init_times
-f = plt.figure(figsize=(15,7))
+f = plt.figure(figsize=(20,12))
 fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar)
 for (i_cm, c_model) in enumerate(E.model.keys()):
 # for (i_cm, c_model) in enumerate(['ukmo','gfdlsipn']):

@@ -186,26 +186,36 @@ f.savefig(os.path.join(fig_dir,'Regional_Map.png'),bbox_inches='tight',dpi=200)
 # In[11]:
 
 
+last_sept
+
+
+# In[14]:
+
+
 # Plot regional sea ice extents (last 90 days)
 f = plt.figure(figsize=(10,5))
 ax1 = plt.subplot(1, 1, 1)
+cmax = 0
 for cd in da_81reg.nregions:
     # Don't plot central arctic (boring)
     if da_81reg.region_names.sel(nregions=cd) == 'Central Arctic':
         continue
-    da_81reg.where(da_81reg.time >= last_sept, 
-                   drop=True).sel(nregions=cd).plot(label=da_81reg.region_names.sel(nregions=cd).values,
+    cdata = da_81reg.where(da_81reg.time >= last_sept, 
+                   drop=True).sel(nregions=cd)
+    cdata.plot(label=da_81reg.region_names.sel(nregions=cd).values,
                                                    color=next(cmap_reg_cycle),
                                                    linestyle=next(linecycler))
+    cmax = np.max([cmax,cdata.max().values])
 ax1.set_title('Regional sea ice extents')
 ax1.set_ylabel('Millions of square km')
+ax1.set_ylim([0,cmax])
 plt.legend(bbox_to_anchor=(1.03, 1.05))
 f_name = os.path.join(fig_dir,'panArcticSIC_Forecast_Regional_CurrentSeason')
 f.savefig(f_name+'.png',bbox_inches='tight',dpi=200)
-mpld3.save_json(f, f_name+'.json')
+#mpld3.save_json(f, f_name+'.json')
 
 
-# In[12]:
+# In[13]:
 
 
 ## Plot Extents

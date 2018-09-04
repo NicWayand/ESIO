@@ -87,7 +87,7 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 var_dic = {'aice':'sic'}
 
 
-# In[9]:
+# In[7]:
 
 
 for model in all_models:
@@ -123,7 +123,7 @@ for model in all_models:
     else:
         ds_mask = None
 
-    for cf in init_times:
+    for cf in sorted(init_times):
         # Check if already imported and skip (unless updateall flag is True)
         f_out = os.path.join(data_out, prefix+'_'+cf+'_Stereo.nc') # netcdf file out 
         if not updateall:
@@ -198,7 +198,7 @@ for model in all_models:
         print('Saved ', f_out)
 
 
-# In[ ]:
+# In[8]:
 
 
 # Clean up
@@ -208,7 +208,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[ ]:
+# In[9]:
 
 
 # sic_all = xr.open_mfdataset(f_out)

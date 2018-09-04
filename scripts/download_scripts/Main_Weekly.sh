@@ -24,8 +24,11 @@ if [ -z "$REPO_DIR" ]; then
     exit 1
 fi
 
-# GET NRL model (weekly updated on wedneday) Download on Thursday
+# GET NRL model (weekly updated on wedneday) Download oin Thursday
 $REPO_DIR"/scripts/download_scripts/download_NRL.sh"
+
+# Get SIO forecasts
+$REPO_DIR"/scripts/download_scripts/download_NRL_SIO.sh"
 
 # Regrid them
 wait # Below depends on above

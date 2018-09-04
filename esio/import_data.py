@@ -1,5 +1,6 @@
 import datetime
 import os
+import glob
 import re
 import numpy as np
 import pandas as pd
@@ -452,3 +453,170 @@ def load_NSIDC(all_files=None, product=None):
     ds_sic = xr.concat(da_l, dim='time', coords='different')
 
     return ds_sic
+
+def load_1_iceBridgeQL(filein=None, start_pt=0):
+    ''' Loads in iceBridge quick look data to a Dataset'''
+    
+    # Data files from: 
+    # https://n5eil01u.ecs.nsidc.org/ICEBRIDGE_FTP/Evaluation_Products/IceBridge_Sea_Ice_Freeboard_SnowDepth_and_Thickness_QuickLook/
+    
+    # We use the "point" as the record dim. Assuming each point is a unique point lat,lon,time.
+    # Allow each nc file to be conactenated 
+    
+    ## Input ##
+    # filein - string
+    #    Full file path
+    # start_pt - index to start next point on (last point + 1)
+    
+    # Load in to dataframe
+    df = pd.read_csv(filein, na_values=[-99999.0,'*****'])
+    
+    # Name index
+    df.index.name = 'point' 
+    
+    # Adjust points by current start_pt
+    df.index = df.index + start_pt + 1
+    
+    # Select variables of interest
+    df = df[['thickness','thickness_unc','lat','lon','snow_depth','snow_depth_unc','date']]
+    
+    # To dataset
+    ds = df.to_xarray()
+    
+    # Rename things
+    ds = ds.rename({'thickness':'hi','thickness_unc':'hi_unc','snow_depth':'sd','snow_depth_unc':'sd_unc'})
+    
+    # Make date int datetime64
+    
+    # First try to use date column
+    try:
+        ds['date'] = xr.DataArray([datetime.datetime.strptime(str(x), "%Y%m%d") for x in ds.date.values], 
+                                  dims='point', coords={'point':ds.point})
+    except ValueError:
+        # Fall back option...
+        # Get date of flight from file name and add
+        cdate = datetime.datetime.strptime(os.path.basename(filein).split('_')[1].split('.')[0], "%Y%m%d")
+        cdate_l = [cdate for n in ds.point.values] # repeat for each point (assumed)
+        ds['date'] = xr.DataArray(cdate_l, dims='point', coords={'point':ds.point}) # add
+
+    return ds
+
+
+def _load_MME_by_init_end(E=None, runType=None, variable=None, metric=None, init_range=None):
+    ''' Loads and concatenates netcdf files of weekly averaged forecasts from multiple models.
+    ----------
+    Parameters:
+    E : Esio data object
+        Contains path and metadata of all models
+    runType : String
+        Type of forecast (used for paths)
+    metric: String
+        Name of metric (i.e. mean, anomaly, SIP) to select (used for paths)
+
+    Returns:
+    ds_m = Dask Dataset
+        Contains all model forecasts by initialization and forecast time
+    '''
+    if init_range:
+        assert init_range[1]>=init_range[0], "Init_range end must be greater than start"
+    
+    # Fixed Parameters
+    concat_dim_time = 'fore_time'
+    drop_coords = ['init_start','valid_start','valid_end']
+    
+    # Paths
+    metric_dir = os.path.join(E.model['MME_NEW'][runType]['sipn_nc'], variable, metric)
+    
+    # Get list of inits (from directory names)
+    init_dirs = sorted([ name for name in os.listdir(metric_dir) if os.path.isdir(os.path.join(metric_dir, name)) ])
+    print("    Found",len(init_dirs),"initialization periods.")
+    
+    # Subset by init_range requested (optional)
+    if init_range:
+        init_dates = [x for x in init_dirs if ((np.datetime64(x) >= init_range[0]) & (np.datetime64(x) <= init_range[1]))]
+    else:
+        init_dates = init_dirs # Use all found
+    
+    ds_init_l = []
+    for c_init in init_dates:
+        print(c_init)
+        c_init_path = os.path.join(metric_dir, c_init)
+                       
+        # Get list of models (dirs)
+        mod_dirs = sorted([ name for name in os.listdir(c_init_path) if os.path.isdir(os.path.join(c_init_path, name)) ])
+        print(mod_dirs)
+        
+        ds_mod_l = []
+        for c_mod in mod_dirs:
+
+            # Open files
+            allfiles = sorted(glob.glob(os.path.join(metric_dir, c_init, c_mod,'*.nc')))
+            if not allfiles:
+                continue # Skip this model
+            ds_i = xr.open_mfdataset(allfiles, drop_variables=['xm','ym'], 
+                                     concat_dim=concat_dim_time, autoclose=True, 
+                                     parallel=True)
+            ds_mod_l.append(ds_i)
+            
+        if (len(ds_mod_l)>0) & (ds_mod_l!=['Observed']): # if not empty and not only Observed (we found atleast one model)
+            ds_all_mods = xr.concat(ds_mod_l, dim='model')
+            print(ds_all_mods)
+        
+            ds_init_l.append(ds_all_mods)
+        
+    # Drop extra coords because of this issue: https://github.com/pydata/xarray/pull/1953
+    ds_init_l = [x.drop(drop_coords) for x in ds_init_l]
+    if ds_init_l:
+        print(ds_init_l)
+        ds_m = xr.concat(ds_init_l, dim='init_end')
+    else:
+        raise ValueError('No init times were found....')
+    
+    # Sometimes lat and lon have init_end as a dim (round off error in lat between files)
+    # If so, drop it
+    # lat and lon get loaded as different for each file, set to constant except along x and y
+    if 'init_end' in ds_m.lat.dims:
+        ds_m.coords['lat'] = ds_m.sel(model='Observed').isel(init_end=0,fore_time=0).lat.drop([concat_dim_time,'init_end','model'])
+        ds_m.coords['lon'] = ds_m.sel(model='Observed').isel(init_end=0,fore_time=0).lon.drop([concat_dim_time,'init_end','model'])
+
+    # Return dask Dataset
+    return ds_m
+
+
+
+def load_MME_by_init_end(E=None, runType=None, variable=None, metrics=None, init_range=None):
+    ''' Loads and concatenates netcdf files of weekly averaged forecasts from multiple models.
+    ----------
+    Parameters:
+    E : Esio data object
+        Contains path and metadata of all models
+    runType : String
+        Type of forecast (used for paths)
+    variable: String
+        Name of variable (i.e. sic) to select (used for paths)
+    metrics: List
+            List of metrics to load
+    init_range: List of two datetime64
+        Start and Stop of init times (inclusive) to load
+            
+    Returns:
+    ds_m = Dask Dataset
+        Contains all model forecasts by initialization and forecast time
+        For all metrics for a given variable
+    '''
+    
+    ds_l = []
+    for cmetric in metrics:
+        print("    Loading",cmetric,"...")
+        ds_m = _load_MME_by_init_end(E=E, runType=runType, variable=variable, metric=cmetric, init_range=init_range)
+        
+        # Somehow different metrics have lat long differeces order 10-6, so only use values from first metric to allow them to be merged
+        # TODO: WHY?!?!??!?!?!
+        if cmetric!=metrics[0]:
+            ds_m = ds_m.drop(['lat','lon'])
+        
+        ds_l.append(ds_m)
+    ds_out = xr.merge(ds_l)
+    
+    return ds_out
+        

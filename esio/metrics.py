@@ -89,7 +89,7 @@ def agg_metric_domain(da_grid=None, ds_region=None):
 
 def get_season_start_date(ctime):
     X = ctime.astype(object)
-    if X.month<8:
+    if X.month<=8:
         yyyy = X.year-1
     else:
         yyyy = X.year
