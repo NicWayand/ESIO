@@ -14,31 +14,30 @@
 set -x  # Echo all lines executed
 set -e  # Stop on any error
 
+# Source path file
+#source ../path_file.sh
+
 # FTP locations of data archives
-data_ftp=https://www7320.nrlssc.navy.mil/nesm/NIC/
+data_ftp=https://n5eil01u.ecs.nsidc.org/ICEBRIDGE/RDEFT4.001
 
 # Make sure the ACF Data environment variable is set
-if [ -z "$NSIDC_NRL_DATA_DIR" ]; then
+if [ -z "$NSIDC_RDEFT4" ]; then
 	# Try to source path file
 	echo "trying to source path_file.sh"
 	source ../path_file.sh
 	# Check if its now set
-	if [ -z "$NSIDC_NRL_DATA_DIR" ]; then
-		echo "Need to set NSIDC_0081_DATA_DIR"
+	if [ -z "$NSIDC_RDEFT4" ]; then
+		echo "Need to set NSIDC_RDEFT4"
 		exit 1
 	fi
 fi
 
-mkdir -p $NSIDC_NRL_DATA_DIR
+mkdir -p $NSIDC_RDEFT4
 
 # Download
-cd $NSIDC_NRL_DATA_DIR
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ARC*121*tar.gz" -N $data_ftp
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ANT*121*tar.gz" -N $data_ftp
+cd $NSIDC_RDEFT4
 
-# Unzip files
-cd $REPO_DIR/scripts/download_scripts/
-./unzip_file_nostrip.sh /home/disk/sipn/nicway/data/model/usnavyncep/forecast/native ARC
+wget -v --cut-dirs=3 --load-cookies ~/.urs_cookies --save-cookies ~/.urs_cookies --keep-session-cookies -r -nH -e robots=off $data_ftp
 
 echo "Done!"
 

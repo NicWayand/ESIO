@@ -78,6 +78,10 @@ failfunction "$?" "Calc_Model_Aggregations.py had an Error. See log."
 python "./Model_Damped_Anomaly_Persistence.py"
 failfunction "$?" "Model_Damped_Anomaly_Persistence.py had an Error. See log."
 
+# Aggregate SIC to weekly forecasts
+python "./Calc_Weekly_Model_Metrics.py"
+failfunction "$?" "Calc_Weekly_Model_Metrics.py had an Error. See log."
+
 # Make Plots
 # Availblity plots
 which python

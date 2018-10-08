@@ -478,7 +478,7 @@ def load_1_iceBridgeQL(filein=None, start_pt=0):
     df.index = df.index + start_pt + 1
     
     # Select variables of interest
-    df = df[['thickness','thickness_unc','lat','lon','snow_depth','snow_depth_unc','date']]
+    df = df[['thickness','thickness_unc','lat','lon','snow_depth','snow_depth_unc','date','mean_fb','fb_unc']]
     
     # To dataset
     ds = df.to_xarray()
@@ -539,12 +539,12 @@ def _load_MME_by_init_end(E=None, runType=None, variable=None, metric=None, init
     
     ds_init_l = []
     for c_init in init_dates:
-        print(c_init)
+        #print(c_init)
         c_init_path = os.path.join(metric_dir, c_init)
                        
         # Get list of models (dirs)
         mod_dirs = sorted([ name for name in os.listdir(c_init_path) if os.path.isdir(os.path.join(c_init_path, name)) ])
-        print(mod_dirs)
+        #print(mod_dirs)
         
         ds_mod_l = []
         for c_mod in mod_dirs:
@@ -560,14 +560,14 @@ def _load_MME_by_init_end(E=None, runType=None, variable=None, metric=None, init
             
         if (len(ds_mod_l)>0) & (ds_mod_l!=['Observed']): # if not empty and not only Observed (we found atleast one model)
             ds_all_mods = xr.concat(ds_mod_l, dim='model')
-            print(ds_all_mods)
+            #print(ds_all_mods)
         
             ds_init_l.append(ds_all_mods)
         
     # Drop extra coords because of this issue: https://github.com/pydata/xarray/pull/1953
     ds_init_l = [x.drop(drop_coords) for x in ds_init_l]
     if ds_init_l:
-        print(ds_init_l)
+        #print(ds_init_l)
         ds_m = xr.concat(ds_init_l, dim='init_end')
     else:
         raise ValueError('No init times were found....')

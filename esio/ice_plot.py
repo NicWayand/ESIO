@@ -125,15 +125,18 @@ def plot_reforecast_bokeh(ds=None, plot_h=None, labelin=None, color='cycle_init_
             cds = None
 
 
-def polar_axis():
+def polar_axis(extent=None, central_longitude=-45):
     '''cartopy geoaxes centered at north pole'''
     f = plt.figure(figsize=(6, 5))
-    ax = plt.axes(projection=ccrs.NorthPolarStereo(central_longitude=-45))
+    ax = plt.axes(projection=ccrs.NorthPolarStereo(central_longitude=central_longitude))
     ax.coastlines(linewidth=0.75, color='black', resolution='50m')
     ax.gridlines(crs=ccrs.PlateCarree(), linestyle='-')
     #ax.set_extent([0, 359.9, 57, 90], crs=ccrs.PlateCarree())
     # Full NSIDC extent
-    ax.set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=-45))
+    if not extent:
+        ax.set_extent([-3850000*0.9, 3725000*0.8, -5325000*0.7, 5850000*0.9], crs=ccrs.NorthPolarStereo(central_longitude=central_longitude))
+    else: # Set Regional extent
+        ax.set_extent(extent, crs=ccrs.NorthPolarStereo(central_longitude=central_longitude))
     return (f, ax)
 
 
@@ -159,3 +162,18 @@ def multi_polar_axis(ncols=4, nrows=4,
         if i>=Nplots-1:
             f.delaxes(axes[i])
     return (f, axes)
+
+def remove_small_contours(p, thres=10):
+    ''' Removes small contours to clean up single contour plots'''
+    for level in p.collections:
+        for kp,path in reversed(list(enumerate(level.get_paths()))):
+            # go in reversed order due to deletions!
+
+            # include test for "smallness" of your choice here:
+            # I'm using a simple estimation for the diameter based on the
+            #    x and y diameter...
+            verts = path.vertices # (N,2)-shape array of contour line coordinates
+            diameter = np.max(verts.max(axis=0) - verts.min(axis=0))
+
+            if diameter<thres: # threshold to be refined for your actual dimensions!
+                del(level.get_paths()[kp])  # no remove() for Path objects:(

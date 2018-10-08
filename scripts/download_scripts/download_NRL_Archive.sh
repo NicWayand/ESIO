@@ -15,7 +15,7 @@ set -x  # Echo all lines executed
 set -e  # Stop on any error
 
 # FTP locations of data archives
-data_ftp=https://www7320.nrlssc.navy.mil/nesm/NIC/
+data_ftp=https://www7320.nrlssc.navy.mil/nesm/NIC2/
 
 # Make sure the ACF Data environment variable is set
 if [ -z "$NSIDC_NRL_DATA_DIR" ]; then
@@ -33,8 +33,8 @@ mkdir -p $NSIDC_NRL_DATA_DIR
 
 # Download
 cd $NSIDC_NRL_DATA_DIR
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ARC*121*tar.gz" -N $data_ftp
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ANT*121*tar.gz" -N $data_ftp
+wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ARC*121*.tar.gz" -N $data_ftp
+wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ANT*121*.tar.gz" -N $data_ftp
 
 # Unzip files
 cd $REPO_DIR/scripts/download_scripts/

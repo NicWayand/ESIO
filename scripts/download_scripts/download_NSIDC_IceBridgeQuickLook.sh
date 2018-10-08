@@ -14,31 +14,30 @@
 set -x  # Echo all lines executed
 set -e  # Stop on any error
 
+# Source path file
+#source ../path_file.sh
+
 # FTP locations of data archives
-data_ftp=https://www7320.nrlssc.navy.mil/nesm/NIC/
+data_ftp=https://n5eil01u.ecs.nsidc.org/ICEBRIDGE_FTP/Evaluation_Products/IceBridge_Sea_Ice_Freeboard_SnowDepth_and_Thickness_QuickLook
 
 # Make sure the ACF Data environment variable is set
-if [ -z "$NSIDC_NRL_DATA_DIR" ]; then
+if [ -z "$NSIDC_IBQL" ]; then
 	# Try to source path file
 	echo "trying to source path_file.sh"
 	source ../path_file.sh
 	# Check if its now set
-	if [ -z "$NSIDC_NRL_DATA_DIR" ]; then
-		echo "Need to set NSIDC_0081_DATA_DIR"
+	if [ -z "$NSIDC_IBQL" ]; then
+		echo "Need to set NSIDC_IBQL"
 		exit 1
 	fi
 fi
 
-mkdir -p $NSIDC_NRL_DATA_DIR
+mkdir -p $NSIDC_IBQL
 
 # Download
-cd $NSIDC_NRL_DATA_DIR
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ARC*121*tar.gz" -N $data_ftp
-wget --no-check-certificate --user=$nrluser --password=$nrlpass -nH --cut-dirs=3 -r -A "ANT*121*tar.gz" -N $data_ftp
+cd $NSIDC_IBQL
 
-# Unzip files
-cd $REPO_DIR/scripts/download_scripts/
-./unzip_file_nostrip.sh /home/disk/sipn/nicway/data/model/usnavyncep/forecast/native ARC
+wget --cut-dirs=20 --load-cookies ~/.urs_cookies --save-cookies ~/.urs_cookies --keep-session-cookies -r --reject "index.html*" -nH -e robots=off -A .txt -N $data_ftp
 
 echo "Done!"
 

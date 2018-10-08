@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -45,7 +45,7 @@ from esio import EsioData as ed
 from esio import import_data
 
 
-# In[2]:
+# In[ ]:
 
 
 # General plotting settings
@@ -53,7 +53,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[3]:
+# In[ ]:
 
 
 E = ed.EsioData.load()
@@ -63,7 +63,7 @@ runType='forecast'
 updateall = False
 
 
-# In[4]:
+# In[ ]:
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
@@ -73,21 +73,22 @@ obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[5]:
+# In[ ]:
 
 
 # Regridding Options
-method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
+# method='conservative_normed' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
+method = 'nearest_s2d'
 
 
-# In[6]:
+# In[ ]:
 
 
 # Set models that are different
 var_dic = {'aice':'sic'}
 
 
-# In[7]:
+# In[ ]:
 
 
 for model in all_models:
@@ -172,33 +173,47 @@ for model in all_models:
             # Multiply sic by fraction ocean to get actual native grid cell sic
             # Also mask land out where land_mask==1
             ds = ds * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
-
+            
+        # Add mask variable so conservative regridding works as expected
+        # DOESN"T WORK WITH OTHER METHODS!!
+        #ds['mask'] = ds.sic.isel(fore_time=0).notnull() # Hardcoded variable choice
+                        
         # Calculate regridding matrix
         regridder = xe.Regridder(ds, obs_grid, method, periodic=False, reuse_weights=weights_flag)
+
         weights_flag = True # Set true for following loops
 
         # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
-        if method=='conservative':
-            regridder = import_data.add_matrix_NaNs(regridder)
+        #if method=='conservative':
+        #    regridder = import_data.add_matrix_NaNs(regridder)
 
         # Regrid variables
 
         var_list = []
         for cvar in ds.data_vars:
-            var_list.append(regridder(ds[cvar]))
+            # 0 to NaN hack
+            #offset = 10
+            #da_coarse = regridder(ds[cvar]+10)
+            #da_coarse = da_coarse.where(da_coarse>(offset)) - offset
+            #var_list.append(da_coarse)
+            
+            # When doing nearest neighbor
+            da_coarse = regridder(ds[cvar])
+            var_list.append(da_coarse)
+            
         ds_out = xr.merge(var_list)
 
         # Expand dims
         ds_out = import_data.expand_to_sipn_dims(ds_out)
-
+                
         # # Save regridded to netcdf file
-
         ds_out.to_netcdf(f_out)
+        
         ds_out = None # Memory clean up
         print('Saved ', f_out)
 
 
-# In[8]:
+# In[ ]:
 
 
 # Clean up
@@ -208,7 +223,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[9]:
+# In[ ]:
 
 
 # sic_all = xr.open_mfdataset(f_out)
