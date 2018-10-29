@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -67,7 +67,7 @@ sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 # client
 
 
-# In[ ]:
+# In[3]:
 
 
 def get_figure_init_times(fig_dir):
@@ -77,7 +77,7 @@ def get_figure_init_times(fig_dir):
     return init_times
 
 
-# In[ ]:
+# In[4]:
 
 
 def update_status(ds_status=None, fig_dir=None, int_2_days_dict=None, NweeksUpdate=3):
@@ -119,8 +119,8 @@ def Update_PanArctic_Maps():
     start_t = datetime.datetime(1950, 1, 1) # datetime.datetime(1950, 1, 1)
     # Params for this plot
     Ndays = 7 # time period to aggregate maps to (default is 7)
-    Npers = 5 # number of periods to plot (from current date) (default is 14)
-    NweeksUpdate = 3 # Always update the most recent NweeksUpdate periods
+    Npers =  5 # 5 number of periods to plot (from current date) (default is 14)
+    NweeksUpdate = 3 # 3 Always update the most recent NweeksUpdate periods
     init_slice = np.arange(start_t, cd, datetime.timedelta(days=Ndays)).astype('datetime64[ns]')
     init_slice = init_slice[-Npers:] # Select only the last Npers of periods (weeks) since current date
 
@@ -203,7 +203,7 @@ def Update_PanArctic_Maps():
 #         ds_ALL.to_zarr('/home/disk/sipn/nicway/data/model/zarr/sic.zarr', mode='w')
 #         xr.exit()
 
-        ds_All = xr.open_zarr('/home/disk/sipn/nicway/data/model/zarr/sic.zarr')
+        ds_ALL = xr.open_zarr('/home/disk/sipn/nicway/data/model/zarr/sic.zarr')
 
         # Define fig dir and make if doesn't exist
         fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar, 'maps_weekly_NEW')
@@ -308,7 +308,7 @@ def Update_PanArctic_Maps():
                     try:
                         da_obs_c = ds_ALL[metric].sel(model='Observed',init_end=it, fore_time=ft)
                         haveObs = True
-                    except:
+                    except KeyError:
                         haveObs = False
 
                     # If obs then plot
@@ -334,7 +334,7 @@ def Update_PanArctic_Maps():
                     ############################################################################
                     #                    Plot all models                                       #
                     ############################################################################
-
+                    p = {}
                     for (i, cmod) in enumerate(models_2_plot):
                         #print(cmod)
                         i = i+1 # shift for obs
@@ -349,7 +349,7 @@ def Update_PanArctic_Maps():
 
                         # Plot
                         if haveMod:
-                            p = ds_model.plot.pcolormesh(ax=axes[i], x='lon', y='lat', 
+                            p[i] = ds_model.plot.pcolormesh(ax=axes[i], x='lon', y='lat', 
                                               transform=ccrs.PlateCarree(),
                                               add_colorbar=False,
                                               cmap=cmap_c,
@@ -363,8 +363,8 @@ def Update_PanArctic_Maps():
                     # Make pretty
                     f.subplots_adjust(right=0.8)
                     cbar_ax = f.add_axes([0.85, 0.15, 0.05, 0.7])
-                    if p:
-                        cbar = f.colorbar(p, cax=cbar_ax, label=c_label)
+                    if p: # if its not empty
+                        cbar = f.colorbar(next(iter(p.values())), cax=cbar_ax, label=c_label) # use first plot to gen colorbar
                         if metric=='anomaly':
                             cbar.set_ticks(np.arange(-1,1.1,0.2))
                         else:
@@ -386,6 +386,7 @@ def Update_PanArctic_Maps():
                     #print("Figure took  ", (timeit.default_timer() - start_time_plot)/60, " minutes.")
                     
                     # Mem clean up
+                    p = None
                     plt.close(f)
                     da_obs_c = None
 
@@ -421,7 +422,7 @@ if __name__ == '__main__':
     Update_PanArctic_Maps()
 
 
-# In[ ]:
+# In[5]:
 
 
 # # Run below in case we need to just update the json file and gifs

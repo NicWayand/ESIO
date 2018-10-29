@@ -58,6 +58,13 @@ failfunction "$?" "Import_NSIDC_Extents.py had an Error. See log."
 python "./Agg_NSIDC_Obs.py"
 failfunction "$?" "Agg_NSIDC_Obs.py had an Error. See log." 
 
+# Convert to Zarr
+python "./Convert_netcdf_to_Zarr.py"
+failfunction "$?" "Convert_netcdf_to_Zarr.py had an Error. See log."
+
+# Upload to GCP
+/home/disk/sipn/nicway/data/obs/zarr/update_obs.sh
+
 # Import Models to sipn format
 source activate test_nio # Requires new env
 python "./Regrid_YOPP.py"

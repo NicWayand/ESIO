@@ -68,7 +68,7 @@ sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 dask.config.set(scheduler='threads')  # overwrite default with threaded scheduler
 
 
-# In[3]:
+# In[6]:
 
 
 #def Update_PanArctic_Maps():
@@ -87,7 +87,7 @@ cd = datetime.datetime(cd.year, cd.month, cd.day) # Set hour min sec to 0.
 start_t = datetime.datetime(1950, 1, 1) # datetime.datetime(1950, 1, 1)
 # Params for this plot
 Ndays = 7 # time period to aggregate maps to (default is 7)
-Npers = 36 # number of periods agg (from current date) (default is 14)
+Npers = 40 # number of periods agg (from current date) (default is 14)
 init_slice = np.arange(start_t, cd, datetime.timedelta(days=Ndays)).astype('datetime64[ns]')
 init_slice = init_slice[-Npers:] # Select only the last Npers of periods (weeks) since current date
 print(init_slice[0],init_slice[-1])
@@ -131,11 +131,11 @@ ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'_yearly/*.nc', concat_
 models_2_plot = list(E.model.keys())
 models_2_plot = [x for x in models_2_plot if x not in ['piomas','MME','MME_NEW','uclsipn','hcmr']] # remove some models
 models_2_plot = [x for x in models_2_plot if E.icePredicted[x]] # Only predictive models
-#models_2_plot = ['usnavyncep']
+# models_2_plot = ['rasmesrl']
 models_2_plot
 
 
-# In[5]:
+# In[ ]:
 
 
 # def is_in_time_range(x):
@@ -147,7 +147,7 @@ models_2_plot
 # time_bds = [init_slice[0],init_slice[-1]]
 
 
-# In[6]:
+# In[ ]:
 
 
 ###########################################################
@@ -299,6 +299,44 @@ for cmod in models_2_plot:
 
                         # Clean up for current model
                         ds_model = None
+
+
+# In[7]:
+
+
+cmod = 'climatology'
+
+all_files = os.path.join(mod_dir,cmod,runType,'sipn_nc', str(cd.year)+'*.nc')
+files = glob.glob(all_files)
+
+obs_clim_model = xr.open_mfdataset(sorted(files), 
+        chunks={'time': 30, 'x': 304, 'y': 448},  
+         concat_dim='time', autoclose=True, parallel=True)
+
+
+# In[13]:
+
+
+from esio import metrics
+ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
+
+
+# In[18]:
+
+
+X = obs_clim_model.sic.sel(time=slice('2018-09-01','2018-09-30'))
+
+
+# In[19]:
+
+
+metrics.calc_extent(da=X, region=ds_region).mean(dim='time').values
+
+
+# In[10]:
+
+
+
 
 
 # In[ ]:
@@ -513,23 +551,24 @@ for cvar in variables:
 # 
 
 
-# In[7]:
+# In[ ]:
 
 
 # Load in all data and write to Zarr
 # Load in all metrics for given variable
 print("Loading in weekly metrics...")
-ds_m = import_data.load_MME_by_init_end(E=E, runType=runType, variable=cvar, 
-                            metrics=metrics_all[cvar], 
-                            init_range=[init_slice[0],init_slice[-1]])
+ds_m = import_data.load_MME_by_init_end(E=E, 
+                                        runType=runType, 
+                                        variable=cvar, 
+                                        metrics=metrics_all[cvar])
 
 # Drop models that we don't evaluate (i.e. monthly means)
 models_keep = [x for x in ds_m.model.values if x not in ['noaasipn','modcansipns_3','modcansipns_4']]
 ds_m = ds_m.sel(model=models_keep)
 # Get list of dynamical models that are not observations
 dynamical_Models = [x for x in ds_m.model.values if x not in ['Observed','climatology','dampedAnomaly','dampedAnomalyTrend']]
-# Get list of all models
-all_Models = [x for x in ds_m.model.values if x not in ['Observed']]
+# # Get list of all models
+# all_Models = [x for x in ds_m.model.values if x not in ['Observed']]
 # Add MME
 MME_avg = ds_m.sel(model=dynamical_Models).mean(dim='model') # only take mean over dynamical models
 MME_avg.coords['model'] = 'MME'

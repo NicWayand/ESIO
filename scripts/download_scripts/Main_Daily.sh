@@ -61,7 +61,7 @@ python "./Regrid_S2S_Models.py"
 failfunction "$?" "Regrid_S2S_Models.py had an Error. See log." 
 
 python "./Regrid_RASM.py"
-failfunction "$?" "Regrid_RASM.py had an Error. See log." 
+#failfunction "$?" "Regrid_RASM.py had an Error. See log." 
 
 python "./Regrid_CFSv2.py"
 failfunction "$?" "Regrid_CFSv2.py had an Error. See log." 

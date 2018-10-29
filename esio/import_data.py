@@ -8,6 +8,14 @@ import scipy
 import xarray as xr
 from dateutil.relativedelta import relativedelta
 
+def lon_shift_360_2_180(ds, lon_name='lon'):
+    ''' Shift lon from 0:360 to -180:180 space 
+    ds - Input datset
+    lon_name - Name of longitude varible to shift
+    '''
+    
+    ds[lon_name] = ((ds[lon_name]+180)%360)-180
+    return ds
 
 def preprocess_time_monthly(x):
     ''' Preprocesses time variables from GFDL format to SIPN2 format.
@@ -196,6 +204,9 @@ def naive_fast(latvar,lonvar,lat0,lon0):
 
 
 def cell_bounds_to_corners(gridinfo=None, varname=None):
+    ''' Some models/obs give the four corner lat/lons for each cell. xesmf needs the bounds N+1 grid, this
+    converts the former to the later.'''
+    
     # Add cell bound coords (lat_b and lon_b)
     n_j = gridinfo.grid_dims.values[1]
     n_i = gridinfo.grid_dims.values[0]
@@ -219,6 +230,9 @@ def cell_bounds_to_corners(gridinfo=None, varname=None):
 
 
 def cell_bounds_to_corners_GFDL(gridinfo=None, varname=None):
+    ''' GFDL provides the four corner lat/lons for each cell. xesmf needs the bounds N+1 grid, this
+    converts the former to the later.'''
+    
     # Add cell bound coords (lat_b and lon_b)
     n_j = gridinfo.grid_dims.values[1]
     n_i = gridinfo.grid_dims.values[0]

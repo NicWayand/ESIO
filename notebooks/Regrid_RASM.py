@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -38,14 +38,21 @@ import seaborn as sns
 import warnings
 import datetime
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
+import dask
+from dask.distributed import Client
 # ESIO Imports
 
 from esio import EsioData as ed
 from esio import import_data
 
 
-# In[2]:
+# In[ ]:
+
+
+# client = Client(n_workers=8)
+
+
+# In[ ]:
 
 
 # General plotting settings
@@ -53,7 +60,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[3]:
+# In[ ]:
 
 
 E = ed.EsioData.load()
@@ -63,7 +70,7 @@ runType='forecast'
 updateall = False
 
 
-# In[4]:
+# In[ ]:
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
@@ -73,14 +80,66 @@ obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[5]:
+# In[ ]:
+
+
+## CAFS SIC (aice) has nan for all non-sea ice covered areas. So use the sst field to create the land mask
+# land_mask is the fraction of native grid cell that is land
+def get_land_mask_hack(ds):
+    ds_land_mask = ds.sst[0,:,:].drop('time')
+    ds_land_mask = ds_land_mask.isnull()
+    ds_land_mask.name = 'land_mask'
+    ds_land_mask.attrs = {'land_mask':'the fraction of native grid cell that is land'}
+    return ds_land_mask 
+
+
+# In[ ]:
+
+
+def fill_NaNOcean_with_Zeros(ds=None, vars=None, ds_land_mask=None):
+    ds_out = ds
+    for cvar in vars:
+        ds_out[cvar] = ds_out[cvar].fillna(0).where(~ds_land_mask)
+    return ds_out
+
+
+# In[ ]:
+
+
+# ds_new = fill_NaNOcean_with_Zeros(ds=ds_test, vars=['aice','hi'], ds_land_mask=ds_land_mask)
+# ds_new['hi'].plot()
+
+
+# In[ ]:
+
+
+# def get_lat_lon_bounds():
+
+# Input
+# Center lat and lon of grid cells (N x M)
+#
+# Output
+# lat_b and lon_b - bounds (N+1 x M+1) for each grid lat lon grid cell center
+
+
+
+# In[ ]:
+
+
+# plt.figure()
+# plt.plot(ds_in.ULON[0:10,0:10].values.flatten(), ds_in.ULAT[0:10,0:10].values.flatten(),'k*',label='U')
+# plt.plot(ds_in.TLON[0:10,0:10].values.flatten(), ds_in.TLAT[0:10,0:10].values.flatten(),'ro',label='T')
+# plt.legend()
+
+
+# In[ ]:
 
 
 # Regridding Options
 method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[6]:
+# In[ ]:
 
 
 ## TODO
@@ -88,13 +147,13 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # - Get lat lon bounds 
 
 
-# In[7]:
+# In[ ]:
 
 
 var_dic = {'aice':'sic','lat':'nj','lon':'ni','TLAT':'lat','TLON':'lon'}
 
 
-# In[8]:
+# In[ ]:
 
 
 for model in all_models:
@@ -128,7 +187,7 @@ for model in all_models:
     else:
         ds_mask = None
 
-    for cf in init_times:
+    for cf in sorted(init_times):
         # Check if already imported and skip (unless updateall flag is True)
         f_out = os.path.join(data_out, prefix+'_'+cf+'_Stereo.nc') # netcdf file out 
         if not updateall:
@@ -139,6 +198,10 @@ for model in all_models:
 
         c_files = sorted(glob.glob(os.path.join(data_dir, prefix+'*_'+cf+'*.nc')))
         ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=False, autoclose=True)
+        
+        # Fill sea ice vars (sic and hi) with zeros where there isn't any ice in ocean (previously NaNs)
+        ds_land_mask = get_land_mask_hack(ds) # get land mask from sst field
+        ds = fill_NaNOcean_with_Zeros(ds=ds, vars=['aice','hi'], ds_land_mask=ds_land_mask)
 
         # Rename variables per esipn guidelines
         ds.rename(var_dic, inplace=True);
@@ -190,7 +253,7 @@ for model in all_models:
         print('Saved ', f_out)
 
 
-# In[9]:
+# In[ ]:
 
 
 # Clean up
@@ -200,7 +263,7 @@ if weights_flag:
 
 # # Plotting
 
-# In[10]:
+# In[ ]:
 
 
 # sic_all = xr.open_mfdataset(f_out)
