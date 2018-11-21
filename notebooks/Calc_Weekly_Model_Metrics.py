@@ -68,7 +68,7 @@ sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 dask.config.set(scheduler='threads')  # overwrite default with threaded scheduler
 
 
-# In[6]:
+# In[3]:
 
 
 #def Update_PanArctic_Maps():
@@ -135,7 +135,7 @@ models_2_plot = [x for x in models_2_plot if E.icePredicted[x]] # Only predictiv
 models_2_plot
 
 
-# In[ ]:
+# In[5]:
 
 
 # def is_in_time_range(x):
@@ -301,7 +301,7 @@ for cmod in models_2_plot:
                         ds_model = None
 
 
-# In[7]:
+# In[ ]:
 
 
 cmod = 'climatology'
@@ -314,29 +314,23 @@ obs_clim_model = xr.open_mfdataset(sorted(files),
          concat_dim='time', autoclose=True, parallel=True)
 
 
-# In[13]:
+# In[ ]:
 
 
 from esio import metrics
 ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[18]:
+# In[ ]:
 
 
 X = obs_clim_model.sic.sel(time=slice('2018-09-01','2018-09-30'))
 
 
-# In[19]:
+# In[ ]:
 
 
 metrics.calc_extent(da=X, region=ds_region).mean(dim='time').values
-
-
-# In[10]:
-
-
-
 
 
 # In[ ]:

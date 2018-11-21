@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -44,15 +44,18 @@ from dask.distributed import Client
 
 from esio import EsioData as ed
 from esio import import_data
+from esio import ice_plot
 
 
-# In[ ]:
+# In[2]:
 
 
+dask.config.set(scheduler='threads')  # overwrite default with threaded scheduler
 # client = Client(n_workers=8)
+# client
 
 
-# In[ ]:
+# In[3]:
 
 
 # General plotting settings
@@ -60,7 +63,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[ ]:
+# In[4]:
 
 
 E = ed.EsioData.load()
@@ -70,7 +73,7 @@ runType='forecast'
 updateall = False
 
 
-# In[ ]:
+# In[5]:
 
 
 stero_grid_file = E.obs['NSIDC_0051']['grid']
@@ -78,9 +81,11 @@ obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 # Ensure latitude is within bounds (-90 to 90)
 # Have to do this because grid file has 90.000001
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
+obs_grid.rename({'imask':'mask'}, inplace=True);
+obs_grid
 
 
-# In[ ]:
+# In[6]:
 
 
 ## CAFS SIC (aice) has nan for all non-sea ice covered areas. So use the sst field to create the land mask
@@ -93,53 +98,119 @@ def get_land_mask_hack(ds):
     return ds_land_mask 
 
 
-# In[ ]:
+# In[7]:
 
 
 def fill_NaNOcean_with_Zeros(ds=None, vars=None, ds_land_mask=None):
     ds_out = ds
     for cvar in vars:
-        ds_out[cvar] = ds_out[cvar].fillna(0).where(~ds_land_mask)
+        ds_out[cvar] = ds_out[cvar].fillna(0.0).where(~ds_land_mask)
     return ds_out
 
 
-# In[ ]:
+# In[8]:
 
 
-# ds_new = fill_NaNOcean_with_Zeros(ds=ds_test, vars=['aice','hi'], ds_land_mask=ds_land_mask)
-# ds_new['hi'].plot()
+# ds_small = ds.sst[:,0:10,0:10].rename({'lat':'nj','lon':'ni'})
+# ds_small
 
 
-# In[ ]:
-
-
-# def get_lat_lon_bounds():
-
-# Input
-# Center lat and lon of grid cells (N x M)
-#
-# Output
-# lat_b and lon_b - bounds (N+1 x M+1) for each grid lat lon grid cell center
-
-
-
-# In[ ]:
+# In[9]:
 
 
 # plt.figure()
-# plt.plot(ds_in.ULON[0:10,0:10].values.flatten(), ds_in.ULAT[0:10,0:10].values.flatten(),'k*',label='U')
-# plt.plot(ds_in.TLON[0:10,0:10].values.flatten(), ds_in.TLAT[0:10,0:10].values.flatten(),'ro',label='T')
+# plt.plot(ds_small.ULON.values.flatten(), ds_small.ULAT.values.flatten(),'k*',label='U')
+# plt.plot(ds_small.TLON.values.flatten(), ds_small.TLAT.values.flatten(),'ro',label='T')
 # plt.legend()
 
 
-# In[ ]:
+# In[10]:
+
+
+# plt.figure()
+# plt.plot(ds.lat[0:10,0:10].values.flatten(), ds.lon[0:10,0:10].values.flatten(),'ro',label='center')
+# plt.plot(ds.lat_b[0:11,0:11].values.flatten(), ds.lon_b[0:11,0:11].values.flatten(),'ko',label='bounds')
+
+# plt.legend()
+
+
+# In[11]:
+
+
+# plt.figure()
+# plt.plot(obs_grid.lat.values.flatten(), obs_grid.lon.values.flatten(),'mo',label='center_OBS')
+# plt.plot(ds.lat.values.flatten(), ds.lon.values.flatten(),'ro',label='center')
+# plt.plot(ds.lat_b.values.flatten(), ds.lon_b.values.flatten(),'ko',label='bounds')
+
+# plt.legend()
+
+
+# In[12]:
+
+
+# from scipy.interpolate import RegularGridInterpolator
+
+# def get_lat_lon_bounds_from_corner(cen_lat=None, cen_lon=None):
+#     ''' Some models only provide lat lon coords or the cell center and the corners. Transform to
+#     the bounding N+1 lats'''
+
+#     # Input
+#     # Center lat and lon of grid cells (N x M)
+#     #
+#     # Output
+#     # lat_b and lon_b - bounds (N+1 x M+1) for each grid lat lon grid cell center
+
+#     # Add cell bound coords (lat_b and lon_b)
+#     n_j = cen_lat.nj.size
+#     n_i = cen_lat.ni.size
+#     nj_b = np.arange(0, n_j + 1) # indices of edge of cells
+#     ni_b = np.arange(0, n_i + 1)
+
+#     nj = np.arange(0, n_j)
+#     ni = np.arange(0, n_i)
+
+#     interf_lat = RegularGridInterpolator((nj, ni), cen_lat, bounds_error=False, fill_value=None)
+#     interf_lon = RegularGridInterpolator((nj, ni), cen_lon, bounds_error=False, fill_value=None)
+
+#     # Create empty matrix
+#     b_grid_lat = np.ones((n_j + 1, n_i + 1))*np.NaN
+#     b_grid_lon = np.ones((n_j + 1, n_i + 1))*np.NaN
+#     # Interpolate each value (inner only)
+#     for ci in ni_b:
+#         for cj in nj_b:
+#             b_grid_lat[cj,ci] = interf_lat([[cj-0.5, ci-0.5]])
+#             b_grid_lon[cj,ci] = interf_lon([[cj-0.5, ci-0.5]])
+
+#     ds_lat_b = xr.DataArray(b_grid_lat, dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b, 'ni_b':ni_b})
+#     ds_lon_b = xr.DataArray(b_grid_lon, dims=('nj_b', 'ni_b'), coords={'nj_b':nj_b, 'ni_b':ni_b})
+
+#     return (ds_lat_b, ds_lon_b)
+
+
+# In[13]:
+
+
+# (ds_lat_b, ds_lon_b) = get_lat_lon_bounds_from_corner(cen_lat=ds.rename({'lat':'nj','lon':'ni'}).TLAT[0:10,0:10], 
+#                                                       cen_lon=ds.rename({'lat':'nj','lon':'ni'}).TLON[0:10,0:10])
+
+
+# In[14]:
+
+
+# plt.figure()
+# plt.plot(ds.TLON[0:10,0:10].values.flatten(), ds.TLAT[0:10,0:10].values.flatten(),'ro',label='center')
+# plt.plot(ds_lon_b.values.flatten(), ds_lat_b.values.flatten(),'ko',label='bounds')
+# plt.legend()
+
+
+# In[15]:
 
 
 # Regridding Options
-method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
+method='conservative_normed' # ['bilinear', 'conservative_normed', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[ ]:
+# In[16]:
 
 
 ## TODO
@@ -147,13 +218,14 @@ method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s'
 # - Get lat lon bounds 
 
 
-# In[ ]:
+# In[17]:
 
 
 var_dic = {'aice':'sic','lat':'nj','lon':'ni','TLAT':'lat','TLON':'lon'}
+var_dic_new = {'aice':'sic'}
 
 
-# In[ ]:
+# In[18]:
 
 
 for model in all_models:
@@ -188,6 +260,8 @@ for model in all_models:
         ds_mask = None
 
     for cf in sorted(init_times):
+        new_grid = False # Assume old grid
+        
         # Check if already imported and skip (unless updateall flag is True)
         f_out = os.path.join(data_out, prefix+'_'+cf+'_Stereo.nc') # netcdf file out 
         if not updateall:
@@ -198,13 +272,23 @@ for model in all_models:
 
         c_files = sorted(glob.glob(os.path.join(data_dir, prefix+'*_'+cf+'*.nc')))
         ds = xr.open_mfdataset(c_files, concat_dim='time', decode_times=False, autoclose=True)
-        
+                
         # Fill sea ice vars (sic and hi) with zeros where there isn't any ice in ocean (previously NaNs)
         ds_land_mask = get_land_mask_hack(ds) # get land mask from sst field
-        ds = fill_NaNOcean_with_Zeros(ds=ds, vars=['aice','hi'], ds_land_mask=ds_land_mask)
+        ds = fill_NaNOcean_with_Zeros(ds=ds, vars=['aice','hi'], 
+                                      ds_land_mask=ds_land_mask)
+        
+        # Check if its the updated grid
+        if 'TLAT' not in ds:
+            new_grid = True
 
         # Rename variables per esipn guidelines
-        ds.rename(var_dic, inplace=True);
+        if new_grid:
+            ds.rename(var_dic_new, inplace=True);
+        else:
+            ds.rename(var_dic, inplace=True);
+        
+        
         ds = ds.drop('time_bounds')
 
         # Format times
@@ -216,7 +300,6 @@ for model in all_models:
         ds.fore_time.attrs['units'] = 'Forecast offset from initial time'
         ds = ds.drop(['time'])
         ds.coords['fore_time'] = ds.fore_time.astype('timedelta64[h]') 
-#         ds.coords['valid_time'] = ds.fore_time + ds.init_time
 
         # Apply masks (if available)
         if ds_mask:
@@ -227,26 +310,62 @@ for model in all_models:
             # Also mask land out where land_mask==1
             ds = ds * (1 - ds_mask.land_mask.where(ds_mask.land_mask<1))
 
-        # Calculate regridding matrix
-        regridder = xe.Regridder(ds, obs_grid, method, periodic=False, reuse_weights=weights_flag)
-        weights_flag = True # Set true for following loops
+        ds.coords['mask'] = ds.sic.isel(fore_time=0).notnull().drop(['fore_time','init_time'])
+        
+        if not new_grid:
+            # Add lat lon bounds (on fly becuase grid changes with different files (system grid change???))
+            n_j = ds.nj.size
+            n_i = ds.ni.size
+            nj_b = np.arange(0, n_j + 1)
+            ni_b = np.arange(0, n_i + 1)
+            ds_b = ds.interp(nj=nj_b-0.5, ni=ni_b-0.5, kwargs={'fill_value': None})
 
-        # Add NaNs to empty rows of matrix (forces any target cell with ANY source cells containing NaN to be NaN)
-        if method=='conservative':
-            regridder = import_data.add_matrix_NaNs(regridder)
+            ds_b = ds_b.rename({'nj':'nj_b','ni':'ni_b','lat':'lat_b','lon':'lon_b'})[['lat_b','lon_b']].drop(['ULAT','ULON'])
+            ds = xr.merge([ds, ds_b])
+           
+        # Calculate regridding matrix
+        if new_grid: # Use bilinear becuase its regualar grid
+            regridder = xe.Regridder(ds, obs_grid, 'bilinear', periodic=False, reuse_weights=weights_flag)
+            weights_flag = False
+        else:   
+            regridder = xe.Regridder(ds, obs_grid, method, periodic=False, reuse_weights=weights_flag)
+            weights_flag = True # Set true for following loops
 
         # Regrid variables
-
         var_list = []
         for cvar in ds.data_vars:
-            var_list.append(regridder(ds[cvar]))
+            
+            # offset hack to keep orig missing mask
+            offset = 10.0
+            ds_coarse = regridder(ds[cvar]+offset)
+            ds_coarse = ds_coarse.where(ds_coarse!=0) - offset
+            # Bound max and min
+            if cvar=='sic':
+                c_notmissing = ds_coarse.notnull()
+                ds_coarse = ds_coarse.where(ds_coarse>=0, other=0)
+                ds_coarse = ds_coarse.where(ds_coarse<=1, other=1)
+                ds_coarse = ds_coarse.where(c_notmissing)
+            elif cvar=='hi':
+                c_notmissing = ds_coarse.notnull()
+                ds_coarse = ds_coarse.where(ds_coarse>=0, other=0)
+                ds_coarse = ds_coarse.where(c_notmissing)
+                
+            var_list.append(ds_coarse)
         ds_out = xr.merge(var_list)
 
         # Expand dims
         ds_out = import_data.expand_to_sipn_dims(ds_out)
+        
+#         plt.figure(figsize=(12*400/300,12))
+#         ds_out.sic[0,0,0,:,:].plot()
+#         print(ds.sic.max().values)
+#         print(ds.sic.min().values)
+#         print(ds_out.sic.max().values)
+#         print(ds_out.sic.min().values)
 
-        # # Save regridded to netcdf file
-
+#         # Save regridded to netcdf file
+#         xr.exit()
+        
         ds_out.to_netcdf(f_out)
         ds_out = None # Memory clean up
         ds = None
@@ -254,6 +373,58 @@ for model in all_models:
 
 
 # In[ ]:
+
+
+# regridder = xe.Regridder(ds, obs_grid, method, periodic=True, reuse_weights=weights_flag)
+
+
+# In[ ]:
+
+
+
+# plt.plot(ds.lon.values.flatten(), ds.lat.values.flatten(),'ro',label='center')
+# plt.plot(ds.lon_b.values.flatten(), ds.lat_b.values.flatten(),'ko',label='bounds')
+
+
+# plt.plot(obs_grid.lon.values.flatten(), obs_grid.lat.values.flatten(),'mo',
+#          label='center_OBS')
+# plt.plot(obs_grid.lon_b.values.flatten(), obs_grid.lat_b.values.flatten(),'go',
+#          label='center_OBS')
+# plt.plot(ds.lon.values.flatten(), ds.lat.values.flatten(),'ro',label='center')
+# plt.plot(ds.lon_b.values.flatten(), ds.lat_b.values.flatten(),'ko',label='bounds')
+
+
+# (f, ax1) = ice_plot.polar_axis()
+# plt.plot(obs_grid.lon.values.flatten(), obs_grid.lat.values.flatten(),'mo',
+#          label='center_OBS', transform=ccrs.PlateCarree())
+# # plt.plot(obs_grid.lon_b.values[0:10,0:10].flatten(), obs_grid.lat_b[0:10,0:10].values.flatten(),'go',
+# #          label='center_OBS')
+# # plt.plot(ds.lon.values.flatten(), ds.lat.values.flatten(),'ro',label='center')
+# ax1.plot(ds.lon_b.values.flatten(), ds.lat_b.values.flatten(),'ko',label='bounds',
+#         transform=ccrs.PlateCarree())
+
+
+
+
+# ds.sic.isel(fore_time=0).notnull().drop(['fore_time','init_time']).plot()
+
+# ds.mask.plot()
+
+# ds_out
+
+# plt.figure(figsize=(12*400/300,12))
+# ds_out.mask[:,:].plot()
+
+# plt.figure(figsize=(12*400/300,12))
+# ds.sic[0,:,:].plot()
+# print(ds.sic[0,:,:].mean().values)
+
+# plt.figure(figsize=(12*400/300,12))
+# ds_out.sic[0,0,0,:,:].plot(vmin=0, vmax=1)
+# print(ds_out.sic[0,:,:].mean().values)
+
+
+# In[20]:
 
 
 # Clean up

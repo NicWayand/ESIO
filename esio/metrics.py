@@ -320,15 +320,21 @@ def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=Fa
     
     if testplots:
         plt.figure()
-        (abs(mod_sip - obs_sip)).plot(cmap='Reds')
+        (abs(mod_sip - obs_sip)).plot()
     
-    # Calculate both terms (over and under area) in km^2
-    IIEE = (abs(mod_sip - obs_sip) * region.area ).sum(dim='x').sum(dim='y')/(10**6)
+    # Calculate both terms (over and under area) in millions of km^2
+    IIEE = (abs(mod_sip - obs_sip) * region.area ).sum(dim=['x','y'])/(10**6)
+    # Differencing mod-obs, will take only non-missing pixels (inner)
+    # So models with 
+    
+    # Remove IIEE values of zero where model AND observation were missing
+    have_mod_and_obs = (mod_sip.sum(['x','y']) > 0) & (obs_sip.sum(['x','y']) > 0) 
+    IIEE = IIEE.where(have_mod_and_obs)
     
     return IIEE
 
 def _BSS(mod=None, obs=None):
-    return ((mod-obs)**2) #.mean(dim=time_dim)
+    return ((mod-obs)**2)
 
 def BrierSkillScore(da_mod_sip=None, 
                     da_obs_ip=None, 

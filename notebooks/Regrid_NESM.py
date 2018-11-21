@@ -134,10 +134,7 @@ for model in all_models:
                 continue # Skip, file already imported
 
         c_files = sorted(glob.glob(os.path.join(data_dir, '*'+prefix+'*_'+cf+'*.nc')))
-        
-        
-        #def nrl_time_import(x):
-            
+                    
         
         # Some files have a "tau" variable that is hours since analysis
         try:

@@ -64,6 +64,7 @@ failfunction "$?" "Convert_netcdf_to_Zarr.py had an Error. See log."
 
 # Upload to GCP
 /home/disk/sipn/nicway/data/obs/zarr/update_obs.sh
+/home/disk/sipn/nicway/data/model/zarr/upload.sh
 
 # Import Models to sipn format
 source activate test_nio # Requires new env

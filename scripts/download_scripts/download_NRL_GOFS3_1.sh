@@ -12,7 +12,7 @@
 
 # Downloads data from nsidc
 set -x  # Echo all lines executed
-set -e  # Stop on any error
+#set -e  # Stop on any error
 
 # FTP locations of data archives
 data_ftp=https://www7320.nrlssc.navy.mil/nesm/GOFS_3.1
