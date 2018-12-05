@@ -82,6 +82,9 @@ failfunction "$?" "Model_Damped_Anomaly_Persistence.py had an Error. See log."
 python "./Calc_Weekly_Model_Metrics.py"
 failfunction "$?" "Calc_Weekly_Model_Metrics.py had an Error. See log."
 
+# Upload Zarr files to Google Cloud Bucket
+/home/disk/sipn/nicway/data/model/zarr/upload.sh
+
 # Make Plots
 # Availblity plots
 which python

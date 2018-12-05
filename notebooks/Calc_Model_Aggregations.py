@@ -58,6 +58,7 @@ from esio import metrics
 
 
 def Update_Model_Aggs():
+    '''Calculates pan-arctic and regional extents from different forecast models'''
     
     E = ed.EsioData.load()
     model_dir = E.model_dir
@@ -135,7 +136,7 @@ def Update_Model_Aggs():
         print("Finished...")
 
 
-# In[4]:
+# In[ ]:
 
 
 if __name__ == '__main__':

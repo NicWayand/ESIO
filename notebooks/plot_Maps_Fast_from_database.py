@@ -182,28 +182,8 @@ def Update_PanArctic_Maps():
 
     for cvar in variables:
 
-#         # Load in all metrics for given variable
-#         ds_m = import_data.load_MME_by_init_end(E=E, runType=runType, variable=cvar, 
-#                                     metrics=metrics_all[cvar], 
-#                                     init_range=[init_slice[0],init_slice[-1]])
-
-#         # Drop models that we don't evaluate (i.e. monthly means)
-#         models_keep = [x for x in ds_m.model.values if x not in ['noaasipn','modcansipns_3','modcansipns_4']]
-#         ds_m = ds_m.sel(model=models_keep)
-#         # Get list of dynamical models that are not observations
-#         dynamical_Models = [x for x in ds_m.model.values if x not in ['Observed','climatology','dampedAnomaly','dampedAnomalyTrend']]
-#         # Get list of all models
-#         all_Models = [x for x in ds_m.model.values if x not in ['Observed']]
-#         # Add MME
-#         MME_avg = ds_m.sel(model=dynamical_Models).mean(dim='model') # only take mean over dynamical models
-#         MME_avg.coords['model'] = 'MME'
-#         ds_ALL = xr.concat([ds_m, MME_avg], dim='model')
-        
-#         # Save to Zarr
-#         ds_ALL.to_zarr('/home/disk/sipn/nicway/data/model/zarr/sic.zarr', mode='w')
-#         xr.exit()
-
-        ds_ALL = xr.open_zarr('/home/disk/sipn/nicway/data/model/zarr/sic.zarr')
+        # Load in dask data from Zarr
+        ds_ALL = xr.open_zarr(os.path.join(E.data_dir,'model/zarr',cvar+'.zarr'))
 
         # Define fig dir and make if doesn't exist
         fig_dir = os.path.join(E.fig_dir, 'model', 'all_model', cvar, 'maps_weekly_NEW')
@@ -221,7 +201,9 @@ def Update_PanArctic_Maps():
         # Check what plots we already have
         if not updateAll:
             print("Removing figures we have already made")
-            ds_status = update_status(ds_status=ds_status, fig_dir=fig_dir, int_2_days_dict=int_2_days_dict, NweeksUpdate=NweeksUpdate)
+            ds_status = update_status(ds_status=ds_status, fig_dir=fig_dir, 
+                                      int_2_days_dict=int_2_days_dict, 
+                                      NweeksUpdate=NweeksUpdate)
 
         
         print(ds_status.status.values)

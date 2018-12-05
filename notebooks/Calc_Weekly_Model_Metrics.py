@@ -87,24 +87,25 @@ cd = datetime.datetime(cd.year, cd.month, cd.day) # Set hour min sec to 0.
 start_t = datetime.datetime(1950, 1, 1) # datetime.datetime(1950, 1, 1)
 # Params for this plot
 Ndays = 7 # time period to aggregate maps to (default is 7)
-Npers = 40 # number of periods agg (from current date) (default is 14)
+
+#Npers = 40 # number of periods agg (from current date)
+init_start_date = np.datetime64('2018-01-01')
+
 init_slice = np.arange(start_t, cd, datetime.timedelta(days=Ndays)).astype('datetime64[ns]')
-init_slice = init_slice[-Npers:] # Select only the last Npers of periods (weeks) since current date
+# init_slice = init_slice[-Npers:] # Select only the last Npers of periods (weeks) since current date
+init_slice = init_slice[init_slice>=init_start_date] # Select only the inits after init_start_date
+
 print(init_slice[0],init_slice[-1])
 print('')
 
-# Forecast times to plot
-weeks = pd.to_timedelta(np.arange(0,5,1), unit='W')
-months = pd.to_timedelta(np.arange(2,12,1), unit='M')
-years = pd.to_timedelta(np.arange(1,2), unit='Y') - np.timedelta64(1, 'D') # need 364 not 365
-slices = weeks.union(months).union(years).round('1d')
-da_slices = xr.DataArray(slices, dims=('fore_time'))
+# Forecast times
+weeks = pd.to_timedelta(np.arange(0,52,1), unit='W')
+#months = pd.to_timedelta(np.arange(2,12,1), unit='M')
+#years = pd.to_timedelta(np.arange(1,2), unit='Y') - np.timedelta64(1, 'D') # need 364 not 365
+#slices = weeks.union(months).union(years).round('1d')
+da_slices = xr.DataArray(weeks, dims=('fore_time'))
 da_slices.fore_time.values.astype('timedelta64[D]')
 print(da_slices)
-
-# Help conversion between "week/month" period used for figure naming and the actual forecast time delta value
-int_2_days_dict = dict(zip(np.arange(0,da_slices.size), da_slices.values))
-days_2_int_dict = {v: k for k, v in int_2_days_dict.items()}
 
 
 # In[4]:
@@ -135,7 +136,7 @@ models_2_plot = [x for x in models_2_plot if E.icePredicted[x]] # Only predictiv
 models_2_plot
 
 
-# In[5]:
+# In[ ]:
 
 
 # def is_in_time_range(x):
@@ -199,13 +200,8 @@ for cmod in models_2_plot:
 
             for ft in da_slices.values: 
 
-                #print(ft.astype('timedelta64[D]'))
-                #cs_str = format(days_2_int_dict[ft], '02') # Get index of current forcast week
-                #week_str = format(int(ft.astype('timedelta64[D]').astype('int')/Ndays) , '02') # Get string of current week
                 cdoy_end = pd.to_datetime(it + ft).timetuple().tm_yday # Get current day of year end for valid time
                 cdoy_start = pd.to_datetime(it_start + ft).timetuple().tm_yday  # Get current day of year end for valid time
-                #it_yr = str(pd.to_datetime(it).year) 
-                #it_m = str(pd.to_datetime(it).month)
 
                 # Get datetime64 of valid time start and end
                 valid_start = it_start + ft
@@ -317,20 +313,12 @@ obs_clim_model = xr.open_mfdataset(sorted(files),
 # In[ ]:
 
 
-from esio import metrics
-ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
+# from esio import metrics
+# ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
+# X = obs_clim_model.sic.sel(time=slice('2018-09-01','2018-09-30'))
 
-# In[ ]:
-
-
-X = obs_clim_model.sic.sel(time=slice('2018-09-01','2018-09-30'))
-
-
-# In[ ]:
-
-
-metrics.calc_extent(da=X, region=ds_region).mean(dim='time').values
+# metrics.calc_extent(da=X, region=ds_region).mean(dim='time').values
 
 
 # In[ ]:
@@ -548,6 +536,7 @@ for cvar in variables:
 # In[ ]:
 
 
+cvar = 'sic' # hard coded for now
 # Load in all data and write to Zarr
 # Load in all metrics for given variable
 print("Loading in weekly metrics...")
@@ -568,9 +557,119 @@ MME_avg = ds_m.sel(model=dynamical_Models).mean(dim='model') # only take mean ov
 MME_avg.coords['model'] = 'MME'
 ds_ALL = xr.concat([ds_m, MME_avg], dim='model')
 
+
+# In[ ]:
+
+
+
+###### ADD METADATA #################
+
+## Add coordinate system info
+ds_ALL.coords['crs'] = xr.DataArray('crs')
+ds_ALL['crs'].attrs = {
+    'comment': '(https://nsidc.org/data/polar-stereo/ps_grids.html or https://nsidc.org/data/oib/epsg_3413.html) This is a container variable that describes the grid_mapping used by the data in this file. This variable does not contain any data; only information about the geographic coordinate system',
+    'grid_mapping_name': 'polar_stereographic',
+    'straight_vertical_longitude_from_pole':'-45',
+    'latitude_of_projection_origin': '90.0',
+    'standard_parallel':'70',
+    'false_easting':'0',
+    'false_northing':'0'
+    }
+
+# Add time coords
+ds_ALL.coords['init_start'] = ds_ALL.init_end - np.timedelta64(Ndays,'D') + np.timedelta64(1,'D')
+ds_ALL['init_start'].attrs = {
+    'comment':        'Start date for weekly average period',
+    'long_name':      'Start date for weekly average period',
+    'standard_name':  "start_init_date"}
+
+ds_ALL['init_end'].attrs = {
+    'comment':        'End date for weekly average period',
+    'long_name':      'End date for weekly average period',
+    'standard_name':  "end_init_date"}
+
+ds_ALL['fore_time'].attrs = {
+    'comment':        'Forecast lead time',
+    'long_name':      'Forecast lead time',
+    'standard_name':  "forecast_lead_time"}
+
+# Add Valid time (start and end period)
+ds_ALL = import_data.get_valid_time(ds_ALL, init_dim='init_end', fore_dim='fore_time')
+ds_ALL.rename({'valid_time':'valid_end'}, inplace=True);
+ds_ALL.coords['valid_start'] = ds_ALL.valid_end - np.timedelta64(Ndays,'D') + np.timedelta64(1,'D')
+
+# Add attributes
+ds_ALL['valid_end'].attrs = {
+    'comment':        'End Valid date for weekly average period',
+    'long_name':      'End Valid date for weekly average period',
+    'standard_name':  "end_valid_date"}
+
+ds_ALL['valid_start'].attrs = {
+    'comment':        'Start Valid date for weekly average period',
+    'long_name':      'Start Valid date for weekly average period',
+    'standard_name':  "start_valid_date"}
+
+# Add Variable attributes
+ds_ALL['SIP'].attrs = {
+    'comment':        'Sea ice probability, calculated by averaging across ensemble members predictions of sea ice concentration >= 0.15',
+    'grid_mapping':   'crs',
+    'long_name':      'Sea ice probability',
+    'standard_name':  "sea_ice_probability",
+    'units':          'fraction'}
+
+ds_ALL['anomaly'].attrs = {
+    'comment':        'Anomaly of the forecasted sea ice concentration mean (ensemble average) compared to the 1980 to 2010 Observed Climatology',
+    'grid_mapping':   'crs',
+    'long_name':      'Anomaly',
+    'standard_name':  "anomaly",
+    'units':          'fraction'}
+
+ds_ALL['mean'].attrs = {
+    'comment':        'Mean of the forecasted sea ice concentration (ensemble average)',
+    'grid_mapping':   'crs',
+    'long_name':      'Sea ice concentration',
+    'standard_name':  "sea_ice_concentration",
+    'units':          'fraction'}
+
+# Dataset Attributes
+ds_ALL.attrs = {
+'comment':                         'Weekly mean sea ice concentration forecasted by multiple models as well as observed by remotly sensed passive microwave sensors.',
+'contact':                         'nicway@uw.edu',
+'creator_email':                   'nicway@uw.edu',
+'creator_name':                    'Nicholas Wayand, University of Washington',
+'creator_url':                     'https://atmos.uw.edu/sipn/',
+'date_created':                    '2018-12-03T00:00:00',
+'date_modified':                   datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+'geospatial_lat_max':              str(float(ds_ALL.lat.max().values)),
+'geospatial_lat_min':              str(float(ds_ALL.lat.min().values)),
+'geospatial_lat_resolution':       '~25km',
+'geospatial_lat_units':            'degrees_north',
+'geospatial_lon_max':              str(float(ds_ALL.lon.max().values)),
+'geospatial_lon_min':              str(float(ds_ALL.lon.min().values)),
+'geospatial_lon_resolution':       '~25km',
+'geospatial_lon_units':            'degrees_east',
+'history':                         datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S')+': updated by Nicholas Wayand',
+'institution':                     'UW, SIPN, ARCUS',
+'keywords':                        'Arctic > Sea ice concentration > Prediction',
+'product_version':                 '1.0',
+'project':                         'Sea Ice Prediction Network Phase II',
+'references':                      'Wayand, N.E., Bitz, C.M., and E. Blanchard-Wrigglesworth, (in review). A year-round sub-seasonal to seasonal sea ice prediction portal. Submited to Geophysical Research letters.',
+'source':                          'Numerical model predictions and Passive microwave measurments.',
+'summary':                         'Dataset is updated daily with weekly sea ice forecasts',
+'time_coverage_end':               pd.to_datetime(ds_ALL.valid_end.max().values).strftime('%Y-%m-%dT%H:%M:%S'),
+'time_coverage_start':             pd.to_datetime(ds_ALL.init_start.min().values).strftime('%Y-%m-%dT%H:%M:%S'),
+'title':                           'SIPN2 Sea ice Concentration Forecasts and Observations.'
+}
+
+####################################
+print(ds_ALL)
+
 # Save to Zarr
 print("Saving to Zarr...")
-ds_ALL.to_zarr('/home/disk/sipn/nicway/data/model/zarr/sic.zarr', mode='w')
+ds_ALL.to_zarr(os.path.join(E.data_dir,'model/zarr', cvar+'.zarr'), mode='w')
 print("Finished updating Weekly SIC metrics and saved to Zar")
+ds_ALL=None # Flush memory
+MME_avg=None
+ds_m=None
 
 

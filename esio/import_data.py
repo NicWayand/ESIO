@@ -579,6 +579,7 @@ def _load_MME_by_init_end(E=None, runType=None, variable=None, metric=None, init
             ds_init_l.append(ds_all_mods)
         
     # Drop extra coords because of this issue: https://github.com/pydata/xarray/pull/1953
+    # This was fixed (?) in Aug 2018, TODO: check its still needed
     ds_init_l = [x.drop(drop_coords) for x in ds_init_l]
     if ds_init_l:
         #print(ds_init_l)

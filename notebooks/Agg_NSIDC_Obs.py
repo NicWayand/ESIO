@@ -51,7 +51,7 @@ data_dir = E.obs_dir
 UpdateAll = False
 
 # Products to import
-product_list = ['NSIDC_0081' , 'NSIDC_0079', 'NSIDC_0051']
+product_list = ['NSIDC_0081', 'NSIDC_0079', 'NSIDC_0051']
 
 cy = datetime.datetime.now().year
 

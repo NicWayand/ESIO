@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -54,7 +54,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 # Plotting Info
@@ -63,7 +63,7 @@ variables = ['sic'] #, 'hi'
 metric1 = 'extent'
 
 
-# In[3]:
+# In[ ]:
 
 
 # Initialization times to plot
@@ -73,7 +73,7 @@ SD = cd - datetime.timedelta(days=90)
 ED = cd + datetime.timedelta(days=365)
 
 
-# In[4]:
+# In[ ]:
 
 
 # Models not to plot
@@ -86,7 +86,7 @@ no_plot = ['rasmesrl','noaasipn']
 
 
 
-# In[5]:
+# In[ ]:
 
 
 #############################################################
@@ -95,7 +95,7 @@ no_plot = ['rasmesrl','noaasipn']
 E = ed.EsioData.load()
 
 
-# In[6]:
+# In[ ]:
 
 
 
@@ -112,14 +112,14 @@ ds_ext = xr.open_dataset(os.path.join(E.obs['NSIDC_extent']['sipn_nc'], 'N_seaic
 ds_ext = ds_ext.rename({'datetime':'time'})
 
 
-# In[7]:
+# In[ ]:
 
 
 # Combine extent obs using highest quality first
 ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first(da_81)
 
 
-# In[8]:
+# In[ ]:
 
 
 # Load in regional data
@@ -127,13 +127,13 @@ ds_obs = ds_ext #.Extent.combine_first(da_79).combine_first(da_51).combine_first
 ds_region = xr.open_dataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
 
 
-# In[9]:
+# In[ ]:
 
 
 cdate = datetime.datetime.now()
 
 
-# In[10]:
+# In[ ]:
 
 
 ds_per = ds_obs.sel(time=slice('1980','2010'))
@@ -155,7 +155,7 @@ ds_per_std_2['time'] = ds_per_std_2.time + np.timedelta64(ds_per_std.time.size,'
 ds_per_std = xr.concat([ds_per_std,ds_per_std_2], dim='time')
 
 
-# In[11]:
+# In[ ]:
 
 
 def plot_user_Extent():
@@ -177,7 +177,7 @@ def plot_user_Extent():
 
 # # Plot Raw extents and only models that predict sea ice
 
-# In[12]:
+# In[ ]:
 
 
 # cmap_c = itertools.cycle(sns.color_palette("Paired", len(E.model.keys()) ))
@@ -200,6 +200,7 @@ for cvar in variables:
         if not E.icePredicted[cmod]:
             continue
         print(cmod)
+        
         # Load in Model
         model_forecast = os.path.join(E.model[cmod][runType]['sipn_nc_agg'], '*.nc')
 
@@ -280,7 +281,7 @@ for cvar in variables:
 
 # # Plot raw extents
 
-# In[13]:
+# In[ ]:
 
 
 for cvar in variables:
