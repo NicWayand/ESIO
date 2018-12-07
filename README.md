@@ -1,10 +1,8 @@
 # Extended Sea Ice Outlook (ESIO)
 ## Part of the Sea ice Prediction Network Phase 2 (SIPN2)
-
 [![Build Status](https://travis-ci.org/NicWayand/ESIO.svg?branch=master)](https://travis-ci.org/NicWayand/ESIO) [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/NicWayand/ESIO/297f9cb58b017bcb0c69904fa7d62456aeead394?filepath=notebooks%2FExample_plot_SIPN2_data.ipynb)
 
-
-
+### Runable Example Scripts are available through [https://polar.pangeo.io](https://polar.pangeo.io)
 
 Collection of scripts for running the [SIPN2 Portal](http://www.atmos.uw.edu/sipn)
 
