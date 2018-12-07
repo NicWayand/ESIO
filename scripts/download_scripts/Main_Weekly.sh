@@ -39,6 +39,9 @@ cd $REPO_DIR"/notebooks/" # Need to move here as some esiodata functions assume 
 # Import Models to sipn format
 python "./Regrid_NESM.py"
 
+# GFDL (monthly)
+python "./Regrid_GFDL_Forecast.py"
+
 echo Finished Weekly script.
 
 

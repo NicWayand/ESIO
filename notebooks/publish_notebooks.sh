@@ -22,3 +22,4 @@ pyconvert.sh Model_Damped_Anomaly_Persistence.ipynb
 pyconvert.sh Calc_Weekly_Model_Metrics.ipynb
 pyconvert.sh plot_Maps_Fast_from_database.ipynb
 pyconvert.sh Convert_netcdf_to_Zarr.ipynb
+pyconvert.sh Regrid_GFDL_Forecast.ipynb

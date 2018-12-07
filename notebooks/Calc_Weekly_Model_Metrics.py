@@ -179,8 +179,9 @@ for cmod in models_2_plot:
                                  # preprocess=lambda x : is_in_time_range(x)) # 'fore_time': 1, ,
     ds_model_ALL.rename({'nj':'x', 'ni':'y'}, inplace=True)
     
-    #print(ds_model_ALL)
-    
+    # Sort by init_time
+    ds_model_ALL = ds_model_ALL.sortby('init_time')
+        
     # Get Valid time
     ds_model_ALL = import_data.get_valid_time(ds_model_ALL)
     
@@ -490,8 +491,8 @@ for cvar in variables:
                     if 'time' in ds_model.lat.dims:
                         ds_model.coords['lat'] = ds_model.lat.isel(time=0).drop('time') # Drop time from lat/lon dims (not sure why?)
 
-                    # If we have any time
-                    if ds_model.time.size > 0:
+                    # Check we have all observations for this week (7)
+                    if ds_model.time.size == 7:
 
                         if metric=='mean':
                             ds_model = ds_model.mean(dim='time') #ds_81.sic.sel(time=(it + ft))
@@ -536,6 +537,14 @@ for cvar in variables:
 # In[ ]:
 
 
+# from dask.distributed import Client
+# client = Client(n_workers=8)
+# client
+
+
+# In[5]:
+
+
 cvar = 'sic' # hard coded for now
 # Load in all data and write to Zarr
 # Load in all metrics for given variable
@@ -556,6 +565,18 @@ dynamical_Models = [x for x in ds_m.model.values if x not in ['Observed','climat
 MME_avg = ds_m.sel(model=dynamical_Models).mean(dim='model') # only take mean over dynamical models
 MME_avg.coords['model'] = 'MME'
 ds_ALL = xr.concat([ds_m, MME_avg], dim='model')
+
+
+# In[6]:
+
+
+ds_ALL
+
+
+# In[ ]:
+
+
+# check chunk size
 
 
 # In[ ]:

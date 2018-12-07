@@ -86,10 +86,7 @@ failfunction "$?" "Calc_Weekly_Model_Metrics.py had an Error. See log."
 /home/disk/sipn/nicway/data/model/zarr/upload.sh
 
 # Make Plots
-# Availblity plots
 which python
-python "./plot_Maps_Fast_from_database.py"
-failfunction "$?" "plot_Maps_Fast_from_database.py had an Error. See log." 
 
 # Extents
 python "./plot_Extent_Model_Obs.py"
@@ -101,6 +98,8 @@ failfunction "$?" "plot_Regional_Extent.py had an Error. See log."
 # Maps
 python "./plot_Maps_Fast_from_database.py" 
 failfunction "$?" "plot_Maps_Fast_from_database.py had an Error. See log." 
+
+# This needs updating
 #python "./plot_Regional_maps.py"
 #failfunction "$?" "plot_Regional_maps.py had an Error. See log." 
 
