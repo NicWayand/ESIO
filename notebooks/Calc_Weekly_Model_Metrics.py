@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -60,7 +60,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 #client = Client()
@@ -68,7 +68,7 @@ sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 dask.config.set(scheduler='threads')  # overwrite default with threaded scheduler
 
 
-# In[3]:
+# In[ ]:
 
 
 #def Update_PanArctic_Maps():
@@ -108,7 +108,7 @@ da_slices.fore_time.values.astype('timedelta64[D]')
 print(da_slices)
 
 
-# In[4]:
+# In[ ]:
 
 
 #############################################################
@@ -542,7 +542,7 @@ for cvar in variables:
 # client
 
 
-# In[5]:
+# In[ ]:
 
 
 cvar = 'sic' # hard coded for now
@@ -565,18 +565,6 @@ dynamical_Models = [x for x in ds_m.model.values if x not in ['Observed','climat
 MME_avg = ds_m.sel(model=dynamical_Models).mean(dim='model') # only take mean over dynamical models
 MME_avg.coords['model'] = 'MME'
 ds_ALL = xr.concat([ds_m, MME_avg], dim='model')
-
-
-# In[6]:
-
-
-ds_ALL
-
-
-# In[ ]:
-
-
-# check chunk size
 
 
 # In[ ]:
@@ -684,6 +672,11 @@ ds_ALL.attrs = {
 
 ####################################
 print(ds_ALL)
+
+
+# Rechunk from ~1MB to 100MB chunks
+# Chunk along fore_time and init_end
+ds_ALL = ds_ALL.chunk({'fore_time': 10, 'init_end': 10, 'model': 1, 'x': 304, 'y': 448})
 
 # Save to Zarr
 print("Saving to Zarr...")
