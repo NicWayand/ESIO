@@ -526,6 +526,8 @@ def _load_MME_by_init_end(E=None, runType=None, variable=None, metric=None, init
         Type of forecast (used for paths)
     metric: String
         Name of metric (i.e. mean, anomaly, SIP) to select (used for paths)
+    init_range: list
+        list of two np.datetime64 dates, start and stop init period to load
 
     Returns:
     ds_m = Dask Dataset

@@ -1,14 +1,14 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 # Paper or Website plots
 PaperPlots = False # Paper and website have different formating
 
 
-# In[ ]:
+# In[2]:
 
 
 '''
@@ -108,11 +108,15 @@ ds_region = xr.open_dataset(os.path.join(grid_dir, 'sio_2016_mask_Update.nc'))
 cvar = variables[0]
 
 
-# In[8]:
+# In[26]:
 
 
 # Define fig dir and make if doesn't exist
-fig_dir = os.path.join('/home/disk/sipn/nicway/Nic/figures', 'model', 'MME', cvar, 'BSS')
+if PaperPlots:
+    fig_dir = os.path.join('/home/disk/sipn/nicway/Nic/figures', 'model', 'MME', cvar, 'BSS')
+else:
+    fig_dir = os.path.join('/home/disk/sipn/nicway/public_html/sipn/figures/model/Eval')
+
 if not os.path.exists(fig_dir):
     os.makedirs(fig_dir)
 
@@ -246,7 +250,7 @@ E.model_marker['climatology'] = '*'
 E.model['climatology'] = {'model_label':'Climatology\nTrend'}
 
 
-# In[ ]:
+# In[28]:
 
 
 # Aggregate over space (x,y), including all pixels in valid Arctic seas (masked above with BrierSkillScore())
@@ -268,78 +272,61 @@ BSS_agg.model
 
 # ### At what lead time is the MME significantly (95%) better than the Damped Anomaly?
 
-# In[ ]:
+# In[30]:
 
 
-from scipy import stats
+# from scipy import stats
 
-model_1 = 'MME'
-model_2 = 'dampedAnomalyTrend'
-alphaval = 0.05 # 95%
+# model_1 = 'MME'
+# model_2 = 'dampedAnomalyTrend'
+# alphaval = 0.05 # 95%
 
-
-# In[ ]:
-
-
-t_all=[]
-p_all=[]
-cv_all=[]
-for ft in np.arange(0,BSS_agg.fore_time.size):
-    x = BSS_agg.sel(model=model_1).isel(fore_time=ft)
-    y = BSS_agg.sel(model=model_2).isel(fore_time=ft)
+# t_all=[]
+# p_all=[]
+# cv_all=[]
+# for ft in np.arange(0,BSS_agg.fore_time.size):
+#     x = BSS_agg.sel(model=model_1).isel(fore_time=ft)
+#     y = BSS_agg.sel(model=model_2).isel(fore_time=ft)
     
-    x = x.where(x.notnull() & y.notnull(), drop=True)
-    y = y.where(x.notnull() & y.notnull(), drop=True)
+#     x = x.where(x.notnull() & y.notnull(), drop=True)
+#     y = y.where(x.notnull() & y.notnull(), drop=True)
     
-    df = x.size + y.size -2
+#     df = x.size + y.size -2
     
-#     plt.figure()
-#     x.plot.hist(alpha=0.5, label=model_1)
-#     y.plot.hist(alpha=0.5, label=model_2)
-#     plt.legend()
+# #     plt.figure()
+# #     x.plot.hist(alpha=0.5, label=model_1)
+# #     y.plot.hist(alpha=0.5, label=model_2)
+# #     plt.legend()
     
-    t, p = stats.ttest_ind(x, y, equal_var=False)
-    cv = stats.t.ppf(1.0 - alphaval, df)
+#     t, p = stats.ttest_ind(x, y, equal_var=False)
+#     cv = stats.t.ppf(1.0 - alphaval, df)
     
-    t_all.append(t)
-    p_all.append(p)
-    cv_all.append(cv)
+#     t_all.append(t)
+#     p_all.append(p)
+#     cv_all.append(cv)
+    
+    
+# plt.figure()
+# plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+#         abs(np.array(t_all)),'-k*', label='t-value')
+# plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+#         cv_all,'-r*', label='critical t-value')
+# plt.ylabel('t-value')
+# plt.legend()
 
 
-# In[ ]:
-
-
-plt.figure()
-plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
-        abs(np.array(t_all)),'-k*', label='t-value')
-plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
-        cv_all,'-r*', label='critical t-value')
-plt.ylabel('t-value')
-plt.legend()
-
-
-# In[ ]:
-
-
-plt.figure()
-plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
-        p_all,'-k*',label='p value')
-plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
-        np.ones(len(p_all))*alphaval,'-r*',label='Alpha p value')
-plt.ylabel('p-value')
-plt.legend()
-
-
-# In[ ]:
-
-
-plt.figure()
-text(20, 0.02, 'Wayand et al. (in review)', fontsize=12)
+# plt.figure()
+# plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+#         p_all,'-k*',label='p value')
+# plt.plot(BSS_agg.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+#         np.ones(len(p_all))*alphaval,'-r*',label='Alpha p value')
+# plt.ylabel('p-value')
+# plt.legend()
 
 
 # ### Plot BS spatial plots for 1 month lead time
 
-# In[ ]:
+# In[39]:
 
 
 # Remove some select models
@@ -396,7 +383,7 @@ for ft in [SIP_BSS_init_avg.fore_time.values[4]]:
     print(lead_time_days)
 
     if not PaperPlots: # only add for website plots
-        text(20, 0.02, 'Wayand et al. (in review)', fontsize=12)
+        cbar_ax.text(0.35, 1.1, 'Wayand et al. (in review)', fontsize=12)
 
     # Save to file
     f_out = os.path.join(fig_dir,'BSS_Avg_all_Inits_'+lead_time_days.zfill(3)+'_day_lead_time.png')
@@ -406,7 +393,7 @@ for ft in [SIP_BSS_init_avg.fore_time.values[4]]:
 # ### Plot Brier Score vs lead time
 # 
 
-# In[ ]:
+# In[36]:
 
 
 min_N_samples = 10 # Min number of samples to allow for mean
@@ -464,6 +451,9 @@ ax2.set_xlim(ax1.get_xlim());
 ax2.set_ylim([0,for_sample.max()+5]);
 ax2.set_yticks(np.arange(0,for_sample.max()+5,15));
 
+if not PaperPlots: # only add for website plots
+    ax1.text(17, 0.025, 'Wayand et al. (in review)', fontsize=12)
+
 # Save to file
 f_out = os.path.join(fig_dir,'BSS_by_lead_time_PanArctic.png')
 f.savefig(f_out,bbox_inches='tight', dpi=300)
@@ -477,7 +467,7 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 SIP_IIEE.load()
 
 
-# In[ ]:
+# In[41]:
 
 
 min_N_samples = 10 # Min number of samples to allow for mean
@@ -532,6 +522,9 @@ ax2.set_xlim(ax1.get_xlim());
 
 ax2.set_ylim([0,for_sample.max()+5]);
 ax2.set_yticks(np.arange(0,for_sample.max()+5,15));
+
+if not PaperPlots: # only add for website plots
+    ax1.text(np.datetime64('2018-01-01'), 0.025, 'Wayand et al. (in review)', fontsize=12)
 
 # Save to file
 f_out = os.path.join(fig_dir,'IIEE_by_lead_time_PanArctic.png')
@@ -601,7 +594,7 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 # Simple version
 
 
-# In[ ]:
+# In[42]:
 
 
 # copy past info from Table 1
@@ -634,14 +627,14 @@ DA_dict['MME'] = 'MME'
 DA_dict
 
 
-# In[ ]:
+# In[43]:
 
 
 DA_options = sorted(list(set(DA_dict.values())))
 dict(zip(DA_options,np.arange(len(DA_options))))
 
 
-# In[ ]:
+# In[44]:
 
 
 DA_options = [DA_options[1],  DA_options[4], DA_options[5], DA_options[7], DA_options[2], DA_options[3], DA_options[6],DA_options[0],] # Reorder from simple to complex
@@ -650,7 +643,7 @@ DA_options_dict = dict(zip(DA_options,DA_options_i))
 DA_options_dict
 
 
-# In[ ]:
+# In[48]:
 
 
 # In place a multi lead times
@@ -697,8 +690,11 @@ axes.set_xticklabels(DA_options, rotation='45', ha='right')
 plt.legend(loc='lower right', bbox_to_anchor=(1.36, -.25))
 plt.ylabel('Pan-Arctic BS (-)')
 
+if not PaperPlots: # only add for website plots
+    axes.text(5, 0.085, 'Wayand et al. (in review)', fontsize=12)
+             
 # Save to file
-f_out = os.path.join(fig_dir,'DA','BSS_week_Multi_by_DA_Type.png')
+f_out = os.path.join(fig_dir,'BSS_week_Multi_by_DA_Type.png')
 f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
@@ -774,12 +770,12 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 # f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[53]:
 
 
 # Plot BSS by init time for 1 selected fore_time
 # 4 = 28 days
-for ft_i in [0,4]:
+for ft_i in [2,4]:
     BSS_agg_fore = BSS_agg.isel(fore_time=ft_i)
 
     sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
@@ -806,6 +802,10 @@ for ft_i in [0,4]:
     plt.xlabel('Initialization date')
     #plt.title(BSS_agg_fore.fore_time.values.astype('timedelta64[D]').astype(int))
     f.autofmt_xdate()
+    
+    
+    if not PaperPlots: # only add for website plots
+        plt.text(np.datetime64('2018-01-01'), 0.16, 'Wayand et al. (in review)', fontsize=12)
     # Save to file
     f_out = os.path.join(fig_dir,'BSS_by_init_time_'+str(BSS_agg_fore.fore_time.values.astype('timedelta64[D]').astype(int))+'_days.png')
     f.savefig(f_out,bbox_inches='tight', dpi=300)

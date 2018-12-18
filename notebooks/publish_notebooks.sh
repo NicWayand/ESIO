@@ -24,3 +24,4 @@ pyconvert.sh plot_Maps_Fast_from_database.ipynb
 pyconvert.sh Convert_netcdf_to_Zarr.ipynb
 pyconvert.sh Regrid_GFDL_Forecast.ipynb
 pyconvert.sh Eval_weekly_forecasts.ipynb
+pyconvert.sh Agg_Weekly_to_Zarr.ipynb
