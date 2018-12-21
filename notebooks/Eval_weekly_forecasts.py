@@ -5,7 +5,7 @@
 
 
 # Paper or Website plots
-PaperPlots = False # Paper and website have different formating
+PaperPlots = False # Paper and website have different formating. True for running for paper figures. False for running website plots.
 
 
 # In[2]:
@@ -34,7 +34,7 @@ Plot forecast maps with all available models.
 
 
 import matplotlib
-if PaperPlots:
+if not PaperPlots:
     matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from collections import OrderedDict
@@ -108,7 +108,7 @@ ds_region = xr.open_dataset(os.path.join(grid_dir, 'sio_2016_mask_Update.nc'))
 cvar = variables[0]
 
 
-# In[26]:
+# In[8]:
 
 
 # Define fig dir and make if doesn't exist
@@ -181,11 +181,18 @@ ds_ALL = ds_m # rename for new Zarr format usage
 # In[17]:
 
 
+# Hack to decode strings
+ds_ALL['model'] = [s.decode("utf-8") for s in ds_ALL.model.values]
+
+
+# In[18]:
+
+
 # # Drop models that we don't evaluate (i.e. monthly means)
 exl_mods = ['awispin','nicosipn','szapirosipn']
 
 
-# In[18]:
+# In[19]:
 
 
 # Order models to plot in
@@ -197,7 +204,7 @@ model_plot_order.remove('Observed')
 # model_plot_order
 
 
-# In[19]:
+# In[20]:
 
 
 # Calculate the IIEE (Integrated Ice Edge Error)
@@ -213,7 +220,7 @@ SIP_IIEE = xr.concat(l, dim='model')
 SIP_IIEE
 
 
-# In[20]:
+# In[21]:
 
 
 # For SIP, calculate the Brier Skill Score for panArctic 
@@ -230,7 +237,7 @@ for cmod in ds_ALL.model.values:
 SIP_BSS = xr.concat(l, dim='model')
 
 
-# In[21]:
+# In[22]:
 
 
 def add_subplot_title(cmod, E, ax=None, BSS_val=''):
@@ -240,7 +247,7 @@ def add_subplot_title(cmod, E, ax=None, BSS_val=''):
         ax.set_title(cmod)
 
 
-# In[22]:
+# In[23]:
 
 
 # add missing info for climatology
@@ -250,7 +257,7 @@ E.model_marker['climatology'] = '*'
 E.model['climatology'] = {'model_label':'Climatology\nTrend'}
 
 
-# In[28]:
+# In[ ]:
 
 
 # Aggregate over space (x,y), including all pixels in valid Arctic seas (masked above with BrierSkillScore())
@@ -261,7 +268,7 @@ BSS_agg.load() # Compute and load result into memory
 # In[ ]:
 
 
-BSS_agg.model
+BSS_agg.init_end
 
 
 # In[ ]:
@@ -272,7 +279,7 @@ BSS_agg.model
 
 # ### At what lead time is the MME significantly (95%) better than the Damped Anomaly?
 
-# In[30]:
+# In[ ]:
 
 
 # from scipy import stats
@@ -326,7 +333,7 @@ BSS_agg.model
 
 # ### Plot BS spatial plots for 1 month lead time
 
-# In[39]:
+# In[ ]:
 
 
 # Remove some select models
@@ -393,7 +400,7 @@ for ft in [SIP_BSS_init_avg.fore_time.values[4]]:
 # ### Plot Brier Score vs lead time
 # 
 
-# In[36]:
+# In[ ]:
 
 
 min_N_samples = 10 # Min number of samples to allow for mean
@@ -425,11 +432,11 @@ for cmod in model_plot_order:
     else:
         cflag = ''
         
-    if cmod=='MME':
+    if cmod in ['MME','dampedAnomalyTrend','climatology']:
         lw=5
-        
     else:
         lw = 2
+        
     ax1.plot(BSS_agg_init.fore_time.values.astype('timedelta64[D]').astype(int)/7,
             BSS_agg_init.sel(model=cmod).values, label=E.model[cmod]['model_label'].rstrip('*')+cflag,
             color=cc,
@@ -467,7 +474,7 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 SIP_IIEE.load()
 
 
-# In[41]:
+# In[ ]:
 
 
 min_N_samples = 10 # Min number of samples to allow for mean
@@ -497,11 +504,11 @@ for cmod in model_plot_order:
         cflag = '*'
     else:
         cflag = ''
-    if cmod=='MME':
+    if cmod in ['MME','dampedAnomalyTrend','climatology']:
         lw=5
-        
     else:
         lw = 2
+
     ax1.plot(SIP_IIEE_init.fore_time.values.astype('timedelta64[D]').astype(int)/7,
             SIP_IIEE_init.sel(model=cmod).values, label=E.model[cmod]['model_label'].rstrip('*')+cflag,
             color=cc,
@@ -594,7 +601,7 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 # Simple version
 
 
-# In[42]:
+# In[ ]:
 
 
 # copy past info from Table 1
@@ -627,14 +634,14 @@ DA_dict['MME'] = 'MME'
 DA_dict
 
 
-# In[43]:
+# In[ ]:
 
 
 DA_options = sorted(list(set(DA_dict.values())))
 dict(zip(DA_options,np.arange(len(DA_options))))
 
 
-# In[44]:
+# In[ ]:
 
 
 DA_options = [DA_options[1],  DA_options[4], DA_options[5], DA_options[7], DA_options[2], DA_options[3], DA_options[6],DA_options[0],] # Reorder from simple to complex
@@ -643,7 +650,7 @@ DA_options_dict = dict(zip(DA_options,DA_options_i))
 DA_options_dict
 
 
-# In[48]:
+# In[ ]:
 
 
 # In place a multi lead times
@@ -770,7 +777,7 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 # f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[53]:
+# In[ ]:
 
 
 # Plot BSS by init time for 1 selected fore_time
@@ -785,8 +792,8 @@ for ft_i in [2,4]:
         cc = E.model_color[cmod]
         cl = E.model_linestyle[cmod]
         cm = E.model_marker[cmod]
-        if cmod=='MME':
-            lw=4
+        if cmod in ['MME','dampedAnomalyTrend','climatology']:
+            lw=5
         else:
             lw = 2
         if BSS_agg_fore.sel(model=cmod).notnull().sum().values==0:

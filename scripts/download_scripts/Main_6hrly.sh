@@ -66,7 +66,7 @@ failfunction "$?" "Convert_netcdf_to_Zarr.py had an Error. See log."
 /home/disk/sipn/nicway/data/obs/zarr/update_obs.sh
 
 # Import Models to sipn format
-source activate test_nio # Requires new env
+source activate pynioNew # Requires new env
 python "./Regrid_YOPP.py"
 failfunction "$?" "Regrid_YOPP.py had an Error. See log." 
 

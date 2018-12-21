@@ -214,7 +214,7 @@ def cell_bounds_to_corners(gridinfo=None, varname=None):
     ni_b = np.arange(0, n_i + 1)
 
     # Grab all corners as arrays
-    dim_out = tuple(np.flip(gridinfo.grid_dims.T.values,0))
+    dim_out = tuple(np.flip(gridinfo.grid_dims.transpose().values,0))
     ul = gridinfo[varname].isel(grid_corners=0).values.reshape(dim_out)
     ll = gridinfo[varname].isel(grid_corners=1).values.reshape(dim_out)
     lr = gridinfo[varname].isel(grid_corners=2).values.reshape(dim_out)
@@ -300,7 +300,7 @@ def split_GFDL(ds_in, varnames=None):
     b = ds_in[varnames].isel(nj=slice(j_s,None), ni=slice(i_s,None))
     b['nj'] = np.flip(a.nj, axis=0) + a.nj.max() - a.nj.min() + 1 # reverse in nj dim (reindexed below)
     b['ni'] = np.flip(a.ni, axis=0) # flip in ni dim to align with a
-    ds_top = xr.concat([a, b.T], dim='nj')
+    ds_top = xr.concat([a, b.transpose()], dim='nj')
     if not hasattr(ds_top, 'data_vars'):  # convert to dataset if not already
         ds_top = ds_top.to_dataset()
     # concat over nj dim
@@ -555,12 +555,10 @@ def _load_MME_by_init_end(E=None, runType=None, variable=None, metric=None, init
     
     ds_init_l = []
     for c_init in init_dates:
-        #print(c_init)
         c_init_path = os.path.join(metric_dir, c_init)
                        
         # Get list of models (dirs)
         mod_dirs = sorted([ name for name in os.listdir(c_init_path) if os.path.isdir(os.path.join(c_init_path, name)) ])
-        #print(mod_dirs)
         
         ds_mod_l = []
         for c_mod in mod_dirs:
@@ -569,14 +567,13 @@ def _load_MME_by_init_end(E=None, runType=None, variable=None, metric=None, init
             allfiles = sorted(glob.glob(os.path.join(metric_dir, c_init, c_mod,'*.nc')))
             if not allfiles:
                 continue # Skip this model
-            ds_i = xr.open_mfdataset(allfiles, drop_variables=['xm','ym'], 
+            ds_i = xr.open_mfdataset(allfiles, drop_variables=['xm','ym','time','ensemble'], 
                                      concat_dim=concat_dim_time, autoclose=True, 
-                                     parallel=True)
+                                     parallel=True) # We drop these coords here because otherwise concat fails below.
             ds_mod_l.append(ds_i)
             
         if (len(ds_mod_l)>0) & (ds_mod_l!=['Observed']): # if not empty and not only Observed (we found atleast one model)
             ds_all_mods = xr.concat(ds_mod_l, dim='model')
-            #print(ds_all_mods)
         
             ds_init_l.append(ds_all_mods)
         

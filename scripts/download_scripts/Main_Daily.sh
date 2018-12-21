@@ -57,7 +57,7 @@ wait # Below depends on above
 cd $REPO_DIR"/notebooks/" # Need to move here as some esiodata functions assume this
 
 # Import Models to sipn format
-source activate test_nio # Requires new env
+source activate pynioNew # Required to process grib files
 python "./Regrid_S2S_Models.py"
 failfunction "$?" "Regrid_S2S_Models.py had an Error. See log (https://atmos.washington.edu/~nicway/sipn/log/)." 
 

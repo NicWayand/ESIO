@@ -38,8 +38,8 @@ import matplotlib
 import scipy
 import matplotlib.pyplot as plt
 import datetime
-import cartopy.crs as ccrs
-from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
+#import cartopy.crs as ccrs
+#from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -181,7 +181,7 @@ def test_plot():
     ax1.set_title('Target Grid')
 
 
-# In[11]:
+# In[ ]:
 
 
 # For both forecast and reforecast
@@ -314,7 +314,7 @@ for runType in ['forecast','reforecast']:
             regridder.clean_weight_file()  # clean-up    
 
 
-# In[12]:
+# In[ ]:
 
 
 # cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10))
@@ -329,7 +329,7 @@ for runType in ['forecast','reforecast']:
 #                                      cmap='Blues')
 
 
-# In[13]:
+# In[ ]:
 
 
 # cmap_sic = matplotlib.colors.ListedColormap(sns.color_palette("Blues", 10))
@@ -369,7 +369,7 @@ for runType in ['forecast','reforecast']:
 # ax1.set_title('Target Grid')
 
 
-# In[14]:
+# In[ ]:
 
 
 
