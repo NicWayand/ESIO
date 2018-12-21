@@ -15,4 +15,6 @@ scripts/path_file.sh
 update_requirements_files.sh
 notebooks/dask-worker-space
 notebooks/ESIO_DATA.pkl
-
+.cache/
+.pytest_cache/
+notebooks/sipn
