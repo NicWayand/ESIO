@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -57,7 +57,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
 
 
-# In[2]:
+# In[ ]:
 
 
 # from dask.distributed import Client
@@ -68,7 +68,7 @@ dask.config.set(scheduler='threads')  # overwrite default with threaded schedule
 # dask.config.set(scheduler='processes')  # overwrite default with threaded scheduler
 
 
-# In[3]:
+# In[ ]:
 
 
 # Parameters
@@ -77,7 +77,7 @@ Y_Start = 1979
 Y_End = 2017
 
 
-# In[4]:
+# In[ ]:
 
 
 #############################################################
@@ -88,7 +88,7 @@ E = ed.EsioData.load()
 mod_dir = E.model_dir
 
 
-# In[5]:
+# In[ ]:
 
 
 # Get most recent obs
@@ -105,7 +105,7 @@ end_date = datetime.datetime(end_date.year, end_date.month, end_date.day) # Set 
 start_date = datetime.datetime(end_date.year, 1, 1) # Set hour min sec to 0. 
 
 
-# In[6]:
+# In[ ]:
 
 
 # Load in alphas
@@ -113,15 +113,15 @@ alpha_cdoy = xr.open_mfdataset('/home/disk/sipn/nicway/data/model/dampedAnomalyT
                               concat_dim='doy', autoclose=True)
 
 
-# In[7]:
+# In[ ]:
 
 
-alpha_cdoy.alpha.min().values
+alpha_cdoy
 
 
 # # Damped Anomaly from Climatological Mean
 
-# In[8]:
+# In[ ]:
 
 
 # cmod = 'dampedAnomaly'
@@ -177,7 +177,7 @@ alpha_cdoy.alpha.min().values
 
 # # Damped Anomaly from Climatological Trend prediction
 
-# In[9]:
+# In[ ]:
 
 
 cmod = 'dampedAnomalyTrend'
@@ -195,13 +195,19 @@ obs_clim_model = obs_clim_model.swap_dims({'time':'doy'})
 obs_clim_model
 
 
-# In[10]:
+# In[ ]:
 
 
 test_plots = False # Need to uncomment xr.exit() below to stop on first doy
 
 
-# In[39]:
+# In[ ]:
+
+
+UpdateAll = False
+
+
+# In[ ]:
 
 
 # Loop through current year
@@ -209,7 +215,7 @@ for ctime in ds_81.time.sel(time=slice(start_date,end_date)):
     file_out = os.path.join(mod_dir, cmod, runType, 'sipn_nc', pd.to_datetime(ctime.time.values).strftime('%Y-%m-%d')+'.nc')
     
     # Only calc if it doesn't exist
-    if os.path.isfile(file_out):
+    if os.path.isfile(file_out) & ~UpdateAll:
         continue
     
     c_sic = ds_81.sic.sel(time=ctime)
@@ -221,11 +227,12 @@ for ctime in ds_81.time.sel(time=slice(start_date,end_date)):
 
     da_l = []
     # For each forecast period (here 7 days)
-    fore_cast_interval = 7
-    for fore_index in np.arange(0,60,1):
-        fore_anomaly = (alpha_cdoy.sel(doy=cdoy).alpha**fore_index) * c_anomaly
+    fore_cast_interval = 1
+    alpha_lead_time = 7.0 # days that the alpha corr was calculated for
+    for fore_days in np.arange(0,366,1):
+        fore_anomaly = (alpha_cdoy.sel(doy=cdoy).alpha**(fore_days/alpha_lead_time)) * c_anomaly
         
-        valid_doy = cdoy + fore_index * fore_cast_interval
+        valid_doy = cdoy + fore_days
         # Keep  range 1-365
         valid_doy = ((valid_doy-1)%365)+1
 
@@ -238,7 +245,7 @@ for ctime in ds_81.time.sel(time=slice(start_date,end_date)):
         fore_sic = fore_sic.where(fore_sic <= 1, other=1).where(ocnmask)
 
         # Add cords
-        fore_sic.coords['fore_time'] = np.timedelta64(int(fore_index*fore_cast_interval),'D')
+        fore_sic.coords['fore_time'] = np.timedelta64(int(fore_days),'D')
         da_l.append(fore_sic)
         
 #         xr.exit()
@@ -265,7 +272,7 @@ for ctime in ds_81.time.sel(time=slice(start_date,end_date)):
 # Test plots for presentations
 
 
-# In[40]:
+# In[ ]:
 
 
 if test_plots:

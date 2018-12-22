@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -56,13 +56,13 @@ from dask.distributed import Client
 import timeit
 
 
-# In[2]:
+# In[ ]:
 
 
 dask.config.set(scheduler='threads')  # overwrite default with threaded scheduler (This is faster for this code)
 
 
-# In[3]:
+# In[ ]:
 
 
 # from dask.distributed import Client
@@ -70,7 +70,7 @@ dask.config.set(scheduler='threads')  # overwrite default with threaded schedule
 # client
 
 
-# In[4]:
+# In[ ]:
 
 
 #def Update_PanArctic_Maps():
@@ -99,13 +99,13 @@ init_slice = init_slice[init_slice>=init_start_date] # Select only the inits aft
 print(init_slice[0],init_slice[-1])
 
 
-# In[5]:
+# In[ ]:
 
 
 init_slice
 
 
-# In[6]:
+# In[ ]:
 
 
 #############################################################
@@ -133,7 +133,7 @@ mod_dir = E.model_dir
 # models_2_plot
 
 
-# In[7]:
+# In[ ]:
 
 
 cvar = 'sic' # hard coded for now
@@ -200,13 +200,13 @@ for IS in np.arange(0,len(init_slice),Npers): # Every fourth init date
         ds_m=None
 
 
-# In[8]:
+# In[ ]:
 
 
 # xr.open_zarr('/home/disk/sipn/nicway/data/model/zarr/temp/sic_2018-06-24.zarr').SIP.sel(model='MME').notnull().sum().values
 
 
-# In[9]:
+# In[ ]:
 
 
 # Combine all Zarr chunks
@@ -216,7 +216,7 @@ zarr_inits = sorted([ name for name in os.listdir(zarr_dir) if os.path.isdir(os.
 zarr_inits
 
 
-# In[10]:
+# In[ ]:
 
 
 zl = []
@@ -226,13 +226,13 @@ for c_init in zarr_inits:
 ds_Zarr = xr.concat(zl,dim='init_end')
 
 
-# In[11]:
+# In[ ]:
 
 
 print(ds_Zarr)
 
 
-# In[12]:
+# In[ ]:
 
 
 ###### ADD METADATA #################
@@ -335,7 +335,14 @@ ds_Zarr.attrs = {
 }
 
 
-# In[13]:
+# In[ ]:
+
+
+# Hack to decode strings
+# ds_Zarr['model'] = [s.decode("utf-8") for s in ds_Zarr.model.values]
+
+
+# In[ ]:
 
 
 # Save to one Big Zarr

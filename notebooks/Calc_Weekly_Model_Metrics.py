@@ -77,7 +77,7 @@ runType = 'forecast'
 variables = ['sic']
 metrics_all = {'sic':['anomaly','mean','SIP'], 'hi':['mean']}
 #metrics_all = {'sic':['SIP']}
-updateAll = False
+updateAll = True
 
 # Define Init Periods here, spaced by 7 days (aprox a week)
 # Now
@@ -132,7 +132,7 @@ ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'_yearly/*.nc', concat_
 models_2_plot = list(E.model.keys())
 models_2_plot = [x for x in models_2_plot if x not in ['piomas','MME','MME_NEW','uclsipn','hcmr']] # remove some models
 models_2_plot = [x for x in models_2_plot if E.icePredicted[x]] # Only predictive models
-# models_2_plot = ['rasmesrl']
+# models_2_plot = ['dampedAnomalyTrend']
 models_2_plot
 
 

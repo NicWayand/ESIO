@@ -181,18 +181,25 @@ ds_ALL = ds_m # rename for new Zarr format usage
 # In[17]:
 
 
+# Get recent observations
+ds_81 = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'_yearly/*.nc', concat_dim='time', autoclose=True, parallel=True)
+
+
+# In[18]:
+
+
 # Hack to decode strings
 ds_ALL['model'] = [s.decode("utf-8") for s in ds_ALL.model.values]
 
 
-# In[18]:
+# In[19]:
 
 
 # # Drop models that we don't evaluate (i.e. monthly means)
 exl_mods = ['awispin','nicosipn','szapirosipn']
 
 
-# In[19]:
+# In[20]:
 
 
 # Order models to plot in
@@ -204,7 +211,7 @@ model_plot_order.remove('Observed')
 # model_plot_order
 
 
-# In[20]:
+# In[21]:
 
 
 # Calculate the IIEE (Integrated Ice Edge Error)
@@ -220,7 +227,7 @@ SIP_IIEE = xr.concat(l, dim='model')
 SIP_IIEE
 
 
-# In[21]:
+# In[22]:
 
 
 # For SIP, calculate the Brier Skill Score for panArctic 
@@ -237,7 +244,7 @@ for cmod in ds_ALL.model.values:
 SIP_BSS = xr.concat(l, dim='model')
 
 
-# In[22]:
+# In[23]:
 
 
 def add_subplot_title(cmod, E, ax=None, BSS_val=''):
@@ -247,7 +254,7 @@ def add_subplot_title(cmod, E, ax=None, BSS_val=''):
         ax.set_title(cmod)
 
 
-# In[23]:
+# In[24]:
 
 
 # add missing info for climatology
@@ -257,7 +264,7 @@ E.model_marker['climatology'] = '*'
 E.model['climatology'] = {'model_label':'Climatology\nTrend'}
 
 
-# In[ ]:
+# In[25]:
 
 
 # Aggregate over space (x,y), including all pixels in valid Arctic seas (masked above with BrierSkillScore())
@@ -265,13 +272,13 @@ BSS_agg = SIP_BSS.mean(dim=['x','y'])
 BSS_agg.load() # Compute and load result into memory
 
 
-# In[ ]:
+# In[26]:
 
 
 BSS_agg.init_end
 
 
-# In[ ]:
+# In[27]:
 
 
 # plt.imshow(BSS_agg.sel(model='MME').values)
@@ -279,7 +286,7 @@ BSS_agg.init_end
 
 # ### At what lead time is the MME significantly (95%) better than the Damped Anomaly?
 
-# In[ ]:
+# In[28]:
 
 
 # from scipy import stats
@@ -333,7 +340,7 @@ BSS_agg.init_end
 
 # ### Plot BS spatial plots for 1 month lead time
 
-# In[ ]:
+# In[29]:
 
 
 # Remove some select models
@@ -352,7 +359,7 @@ c_label = 'BS (0=best, 1=worst)'
 c_vmin = 0
 c_vmax = 1
 
-for ft in [SIP_BSS_init_avg.fore_time.values[4]]:  
+for ft in [SIP_BSS_init_avg.fore_time.values[0], SIP_BSS_init_avg.fore_time.values[4]]:  
     
     # Grab current lead time
     c_ft_ds = SIP_BSS_init_avg.sel(fore_time=ft)
@@ -397,14 +404,135 @@ for ft in [SIP_BSS_init_avg.fore_time.values[4]]:
     f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
+# ### Plot BS spatial plots valid for Sept
+
+# In[30]:
+
+
+SIP_BSS.model
+
+
+# In[31]:
+
+
+plt.imshow(SIP_BSS.sel(model='ukmetofficesipn').mean(dim=['x','y']).values)
+
+
+# In[32]:
+
+
+plt.imshow(SIP_BSS.where( (SIP_BSS.valid_start>=np.datetime64('2018-09-01')) & 
+              (SIP_BSS.valid_start<=np.datetime64('2018-10-01')), drop=True).sel(model='MME').mean(dim=['x','y']).values)
+
+
+# In[33]:
+
+
+# Remove some select models
+enough_init = model_plot_order.copy()
+[enough_init.remove(a) for a in exl_mods]
+print(enough_init)
+
+
+week_lead_time = 4
+
+period_dict = {'June':[np.datetime64('2018-06-01'),np.datetime64('2018-07-01')],
+              'July':[np.datetime64('2018-07-01'),np.datetime64('2018-08-01')],
+              'August':[np.datetime64('2018-08-01'),np.datetime64('2018-09-01')],
+              'September':[np.datetime64('2018-09-01'),np.datetime64('2018-10-01')]}
+
+for period in period_dict:
+    start_date_map = period_dict[period][0]
+    end_date_map = period_dict[period][1]    
+
+    # Select time slice of valid
+    BS_Sept = SIP_BSS.where( (SIP_BSS.valid_start>=start_date_map) & 
+                  (SIP_BSS.valid_start<=end_date_map), drop=True)
+
+    # Average over valid time 
+    SIP_BSS_init_avg = BS_Sept.sel(model=enough_init).mean(dim='init_end')
+
+    sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
+
+    # Set up color maps
+    cmap_c = matplotlib.colors.LinearSegmentedColormap.from_list("", ["white","orange","red","#990000"], N=10)
+    cmap_c.set_bad(color = 'lightgrey')
+    c_label = 'BS (0=best, 1=worst)'
+    c_vmin = 0
+    c_vmax = 1
+
+    for ft in [SIP_BSS_init_avg.fore_time.values[week_lead_time]]:  
+
+        # Grab current lead time
+        c_ft_ds = SIP_BSS_init_avg.sel(fore_time=ft)
+
+        # Drop models without any data
+        c_ft_ds = c_ft_ds.where(c_ft_ds.notnull().sum(dim=['x','y'])>0, drop=True)
+
+        nrows = np.int(np.ceil(np.sqrt(c_ft_ds.model.size))) - 1
+        ncols = int(np.ceil(c_ft_ds.model.size/nrows))
+        Nplots = c_ft_ds.model.size + 1
+        #print(Nplots)
+
+        # New Plot
+        central_extent = [-3850000*0.6, 3725000*0.6, -5325000*0.45, 5850000*0.45] # (x0, x1, y0, y1
+        (f, axes) = ice_plot.multi_polar_axis(ncols=ncols, nrows=nrows, Nplots=Nplots, 
+                                              extent=central_extent, central_longitude=0)
+
+
+        # Get Observed mean sea ice edge location mean(SIC in sept) > 0.15
+        obs_SIP = ds_81['sic'].sel(time=slice(start_date_map,end_date_map)).mean(dim='time')>=0.15
+        # Fill in pole hole
+        obs_SIP = obs_SIP.where(obs_SIP.hole_mask==0, other=1)
+
+        for (i, cmod) in enumerate(c_ft_ds.model.values):
+            if cmod in c_ft_ds.model.values:
+                # Plot
+                add_subplot_title(cmod, E, ax=axes[i])
+                p = c_ft_ds.sel(model=cmod).plot.pcolormesh(ax=axes[i], x='lon', y='lat', 
+                                      transform=ccrs.PlateCarree(),
+                                      add_colorbar=False,
+                                      cmap=cmap_c,
+                                      vmin=c_vmin, vmax=c_vmax)
+
+                po = obs_SIP.plot.contour(ax=axes[i], x='xm', y='ym',
+                                      transform=ccrs.NorthPolarStereo(central_longitude=-45),
+                                      colors=('k'),
+                                      linewidths=[1],
+                                      levels=[0.5]) #, label='Median ice edge 1981-2010')
+                ice_plot.remove_small_contours(po, thres=10**6)
+
+                add_subplot_title(cmod, E, ax=axes[i], BSS_val='{0:.3f}'.format(c_ft_ds.sel(model=cmod).mean(dim=['x','y']).load().item()))
+
+        # Make pretty
+        cbar_ax = f.add_axes([0.2, 0.05, .5, 0.04]) #  [left, bottom, width, height] w
+        cbar = f.colorbar(p, cax=cbar_ax, label=c_label, orientation='horizontal')
+        cbar.set_ticks(np.arange(-1,1.1,0.2))
+
+        # Set title of all plots
+        lead_time_days = str(ft.astype('timedelta64[D]').astype(int))
+        print(lead_time_days)
+
+        if not PaperPlots: # only add for website plots
+            cbar_ax.text(0.35, 1.1, 'Wayand et al. (in review)', fontsize=12)
+
+        valid_start_str = pd.to_datetime(start_date_map).strftime('%Y-%m-%d')
+        valid_end_str = pd.to_datetime(end_date_map).strftime('%Y-%m-%d')
+
+        # Save to file
+        f_out = os.path.join(fig_dir,'BSS_Avg_Valid_'+valid_start_str+'_to_'+valid_end_str+'_'+lead_time_days.zfill(3)+'_day_lead_time.png')
+        f.savefig(f_out,bbox_inches='tight', dpi=300)
+
+
 # ### Plot Brier Score vs lead time
 # 
 
-# In[ ]:
+# In[64]:
 
 
 min_N_samples = 10 # Min number of samples to allow for mean
 BSS_agg_init = BSS_agg.mean(dim='init_end')
+sns.set_style("whitegrid")
 
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
@@ -466,19 +594,214 @@ f_out = os.path.join(fig_dir,'BSS_by_lead_time_PanArctic.png')
 f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# ### Plot the IIEE with lead time
+# In[35]:
+
+
+## Making a more compact plot for paper...
+
+
+# In[65]:
+
+
+min_N_samples = 10 # Min number of samples to allow for mean
+BSS_agg_init = BSS_agg.mean(dim='init_end')
+sns.set_style("whitegrid")
+
+sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
+
+# Get sample size of for each lead time
+for_sample = BSS_agg.sel(model='MME').notnull().sum(dim='init_end')
+for_sample
+
+# Use threshold of sample size to cut off lead times
+max_lead = for_sample.where(for_sample>=min_N_samples,drop=True).fore_time.max().values.astype('timedelta64[D]').astype(int)/7
+
+f = plt.figure(figsize=(15,10))
+NM = 10
+ax1 = plt.subplot2grid((NM, NM), (0, 0), colspan=NM, rowspan=NM-1)
+ax2 = plt.subplot2grid((NM, NM), (NM-1, 0), colspan=NM, rowspan=1)
+
+for cmod in model_plot_order:
+    if cmod in exl_mods:
+        continue
+    # Get model plotting specs
+    cc = E.model_color[cmod]
+    cl = E.model_linestyle[cmod]
+    cm = E.model_marker[cmod]
+    if cmod=='rasmesrl':
+        cflag = '*'
+    else:
+        cflag = ''
+        
+    if cmod in ['MME','dampedAnomalyTrend','climatology']:
+        lw=5
+    else:
+        lw = 2
+        
+    ax1.plot(BSS_agg_init.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+            BSS_agg_init.sel(model=cmod).values, label=E.model[cmod]['model_label'].rstrip('*')+cflag,
+            color=cc,
+            linestyle=cl,
+            linewidth=lw,
+            marker=cm)
+ax1.legend(loc='lower right', bbox_to_anchor=(1.285, -0.1))
+ax1.set_ylabel('Pan-Arctic BS (-)')
+ax1.set_xlim([-0.5,max_lead])
+ax1.set_xticklabels([''])
+ax1.set_ylim([0.02,0.11])
+
+# second axis
+ax2.plot(for_sample.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+         for_sample.values, '-ko')
+ax2.set_ylabel('#\nweeks   ')
+ax2.set_xlabel('Lead time (Weeks)')
+ax2.set_xlim(ax1.get_xlim());
+
+ax2.set_ylim([0,for_sample.max()+5]);
+ax2.set_yticks(np.arange(0,for_sample.max()+5,15));
+
+if not PaperPlots: # only add for website plots
+    ax1.text(17, 0.025, 'Wayand et al. (in review)', fontsize=12)
+    
+# Save to file
+f_out = os.path.join(fig_dir,'BSS_by_lead_time_PanArctic_New.png')
+f.savefig(f_out,bbox_inches='tight', dpi=300)
+
+
+# In[37]:
+
+
+# Split view
+
+
+# In[66]:
+
+
+min_N_samples = 10 # Min number of samples to allow for mean
+BSS_agg_init = BSS_agg.mean(dim='init_end')
+sns.set_style("whitegrid")
+
+sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
+
+# Get sample size of for each lead time
+for_sample = BSS_agg.sel(model='MME').notnull().sum(dim='init_end')
+for_sample
+
+# Use threshold of sample size to cut off lead times
+max_lead = for_sample.where(for_sample>=min_N_samples,drop=True).fore_time.max().values.astype('timedelta64[D]').astype(int)/7
+
+f = plt.figure(figsize=(15,10))
+NC = 10
+NR = 11
+ax1 = plt.subplot2grid((NR, NC), (0, 0), colspan=5, rowspan=10)
+ax1b = plt.subplot2grid((NR, NC), (0, 5), colspan=5, rowspan=10)
+
+# ax2 = plt.subplot2grid((NR, NC), (NR-1, 5), colspan=NR, rowspan=1)
+
+
+# First axis (full lead time)
+for cmod in model_plot_order:
+    if cmod in exl_mods:
+        continue
+    # Get model plotting specs
+    cc = E.model_color[cmod]
+    cl = E.model_linestyle[cmod]
+    cm = E.model_marker[cmod]
+    if cmod=='rasmesrl':
+        cflag = '*'
+    else:
+        cflag = ''
+        
+    if cmod in ['MME','dampedAnomalyTrend','climatology']:
+        lw=5
+    else:
+        lw = 2
+        
+    ax1b.plot(BSS_agg_init.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+            BSS_agg_init.sel(model=cmod).values, label=E.model[cmod]['model_label'].rstrip('*')+cflag,
+            color=cc,
+            linestyle=cl,
+            linewidth=lw,
+            marker=cm)
+ax1b.legend(loc='lower right', bbox_to_anchor=(1.6, -0.1))
+# ax1b.set_ylabel('Pan-Arctic BS (-)')
+ax1b.set_xlim([-0.5,max_lead])
+# ax1b.set_xticklabels([''])
+ax1b.set_yticklabels([''])
+ax1b.set_ylim([0.02,0.11])
+
+ax1b.text(1, 0.105, 'b) 0-32 Weeks', fontsize=20)
+
+# Second axis (short lead times)
+for cmod in model_plot_order:
+    if cmod in exl_mods:
+        continue
+    # Get model plotting specs
+    cc = E.model_color[cmod]
+    cl = E.model_linestyle[cmod]
+    cm = E.model_marker[cmod]
+    if cmod=='rasmesrl':
+        cflag = '*'
+    else:
+        cflag = ''
+        
+    if cmod in ['MME','dampedAnomalyTrend','climatology']:
+        lw=5
+    else:
+        lw = 2
+        
+    ax1.plot(BSS_agg_init.fore_time.isel(fore_time=np.arange(0,11)).values.astype('timedelta64[D]').astype(int)/7,
+            BSS_agg_init.sel(model=cmod).isel(fore_time=np.arange(0,11)).values, label=E.model[cmod]['model_label'].rstrip('*')+cflag,
+            color=cc,
+            linestyle=cl,
+            linewidth=lw,
+            marker=cm)
+ax1.set_ylabel('Pan-Arctic BS (-)')
+# ax1.set_xlim([-0.5,max_lead])
+# ax1.set_xticklabels([''])
+ax1.set_ylim([0.02,0.11])
+ax1.set_xlabel('Lead time (Weeks)')
+
+ax1.text(0.25, 0.105, 'b) 0-10 Weeks', fontsize=20)
+
+
+# # Third sample size axis
+# ax2.plot(for_sample.fore_time.values.astype('timedelta64[D]').astype(int)/7,
+#          for_sample.values, '-ko')
+# ax2.set_ylabel('#\nweeks   ')
+# ax2.set_xlabel('Lead time (Weeks)')
+# ax2.set_xlim(ax1b.get_xlim());
+
+# ax2.set_ylim([0,for_sample.max()+5]);
+# ax2.set_yticks(np.arange(0,for_sample.max()+5,15));
+
+# plt.subplots_adjust(hspace = 1)    
+    
+# Save to file
+f_out = os.path.join(fig_dir,'BSS_by_lead_time_PanArctic_Split.png')
+f.savefig(f_out,bbox_inches='tight', dpi=300)
+
 
 # In[ ]:
+
+
+
+
+
+# ### Plot the IIEE with lead time
+
+# In[39]:
 
 
 SIP_IIEE.load()
 
 
-# In[ ]:
+# In[67]:
 
 
 min_N_samples = 10 # Min number of samples to allow for mean
 SIP_IIEE_init = SIP_IIEE.mean(dim='init_end')
+sns.set_style("whitegrid")
 
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
@@ -538,19 +861,19 @@ f_out = os.path.join(fig_dir,'IIEE_by_lead_time_PanArctic.png')
 f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[41]:
 
 
 # MaxLeadTime_With_Data = BSS_agg_init.where(BSS_agg_init.notnull(), drop=True).fore_time.max().values.astype('timedelta64[D]').astype(int)
 
 
-# In[ ]:
+# In[42]:
 
 
 ## Plot week 0 BSS vs. ice/ocean assimilation sources
 
 
-# In[ ]:
+# In[43]:
 
 
 # We divide up models based on their initilaization / DA methods/variables
@@ -562,7 +885,7 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 # DI (Direct insertion), NG (Nudging), OI (Optimal interpolation), 4DVAR (4D Variance), 3DVAR (3D Variance), EnKF (Ensemble Kalmen Filter)
 
 
-# In[ ]:
+# In[44]:
 
 
 # # copy past info from Table 1
@@ -595,13 +918,13 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 # DA_dict
 
 
-# In[ ]:
+# In[45]:
 
 
 # Simple version
 
 
-# In[ ]:
+# In[46]:
 
 
 # copy past info from Table 1
@@ -634,14 +957,14 @@ DA_dict['MME'] = 'MME'
 DA_dict
 
 
-# In[ ]:
+# In[47]:
 
 
 DA_options = sorted(list(set(DA_dict.values())))
 dict(zip(DA_options,np.arange(len(DA_options))))
 
 
-# In[ ]:
+# In[48]:
 
 
 DA_options = [DA_options[1],  DA_options[4], DA_options[5], DA_options[7], DA_options[2], DA_options[3], DA_options[6],DA_options[0],] # Reorder from simple to complex
@@ -650,7 +973,7 @@ DA_options_dict = dict(zip(DA_options,DA_options_i))
 DA_options_dict
 
 
-# In[ ]:
+# In[68]:
 
 
 # In place a multi lead times
@@ -659,6 +982,7 @@ DA_options_dict
 
 
 leads2plot = [0,1,2,3,4] # indices
+sns.set_style("whitegrid")
 
 sns.set_context("talk", font_scale=1, rc={"lines.linewidth": 2.5})
 f, axes = plt.subplots(1, 1, figsize=(8, 5))
@@ -705,7 +1029,7 @@ f_out = os.path.join(fig_dir,'BSS_week_Multi_by_DA_Type.png')
 f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[50]:
 
 
 # sns.set_context("talk", font_scale=.8, rc={"lines.linewidth": 2.5})
@@ -746,7 +1070,7 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 #     f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[51]:
 
 
 # BSS_agg_init_short = BSS_agg_init.isel(fore_time=slice(0,5))
@@ -777,11 +1101,13 @@ f.savefig(f_out,bbox_inches='tight', dpi=300)
 # f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[69]:
 
 
 # Plot BSS by init time for 1 selected fore_time
 # 4 = 28 days
+sns.set_style("whitegrid")
+
 for ft_i in [2,4]:
     BSS_agg_fore = BSS_agg.isel(fore_time=ft_i)
 
@@ -818,7 +1144,7 @@ for ft_i in [2,4]:
     f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[53]:
 
 
 # # Plot init_time vs. fore_time BSS for select models
@@ -835,13 +1161,13 @@ for ft_i in [2,4]:
 # plt.ylabel('Lead time (Days)')
 
 
-# In[ ]:
+# In[54]:
 
 
 # BSS_agg_MAX = BSS_agg.max()
 
 
-# In[ ]:
+# In[55]:
 
 
 # sns.set_style('ticks')
@@ -880,7 +1206,7 @@ for ft_i in [2,4]:
 # f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[56]:
 
 
 # # Test skill at various lead times for one valid/target week
@@ -905,7 +1231,7 @@ for ft_i in [2,4]:
 
 
 
-# In[ ]:
+# In[57]:
 
 
 # sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
@@ -940,7 +1266,7 @@ for ft_i in [2,4]:
 
 # # SIP
 
-# In[ ]:
+# In[58]:
 
 
 # # Set up color maps
@@ -998,7 +1324,7 @@ for ft_i in [2,4]:
 
 # ## Plot BSS as a ratio of model to damped trend
 
-# In[ ]:
+# In[59]:
 
 
 # SIP_BSS_init_avg = SIP_BSS.mean(dim='init_end')
@@ -1053,7 +1379,7 @@ for ft_i in [2,4]:
 #     f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[60]:
 
 
 # # Plot spatial average BSS
@@ -1108,7 +1434,7 @@ for ft_i in [2,4]:
 # f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[61]:
 
 
 # # For each region
@@ -1143,7 +1469,7 @@ for ft_i in [2,4]:
 #     f.savefig(f_out,bbox_inches='tight', dpi=300)
 
 
-# In[ ]:
+# In[62]:
 
 
 ### For presentation Step in lines

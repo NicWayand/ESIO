@@ -100,7 +100,7 @@ E = ed.EsioData.load()
 # Load obs
 import timeit
 start_time = timeit.default_timer()
-ds_obs = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'/*.nc', concat_dim='time', autoclose=True)#,
+ds_obs = xr.open_mfdataset(E.obs['NSIDC_0081']['sipn_nc']+'_yearly/*.nc', concat_dim='time')#,
 print(timeit.default_timer() - start_time)
 
 
@@ -154,8 +154,7 @@ for cvar in variables:
             if not files:
                 #print("Skipping model", cmod, "no forecast files found.")
                 continue # Skip this model
-            ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time',
-                                         autoclose=True)
+            ds_model = xr.open_mfdataset(model_forecast, concat_dim='init_time')
 
             # Get Extent
             ds_model = ds_model.Extent

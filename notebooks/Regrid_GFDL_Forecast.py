@@ -7,7 +7,7 @@
 # - Regrids to polar stereographic,
 # - Saves to netcdf files grouped by year
 
-# In[1]:
+# In[ ]:
 
 
 '''
@@ -47,7 +47,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 from esio import import_data
 
 
-# In[2]:
+# In[ ]:
 
 
 # General plotting settings
@@ -55,7 +55,7 @@ sns.set_style('whitegrid')
 sns.set_context("talk", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 
-# In[3]:
+# In[ ]:
 
 
 # Directories
@@ -69,20 +69,20 @@ model_grid_file = os.path.join(base_dir, 'grids', 'GFDLFLOR_gridinfo.nc' )
 stero_grid_file = os.path.join(base_dir, 'grids', 'stereo_gridinfo.nc')
 
 
-# In[4]:
+# In[ ]:
 
 
 updateall = False
 
 
-# In[5]:
+# In[ ]:
 
 
 gfdl_grid = import_data.load_grid_info(model_grid_file, model='GFDL')
 gfdl_grid.dims
 
 
-# In[6]:
+# In[ ]:
 
 
 # # Plot the input Grid
@@ -95,7 +95,7 @@ gfdl_grid.dims
 # plt.ylabel('lat')
 
 
-# In[7]:
+# In[ ]:
 
 
 # # Plot the input Grid
@@ -108,7 +108,7 @@ gfdl_grid.dims
 # plt.ylabel('lat')
 
 
-# In[8]:
+# In[ ]:
 
 
 obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
@@ -117,14 +117,14 @@ obs_grid = import_data.load_grid_info(stero_grid_file, model='NSIDC')
 obs_grid['lat_b'] = obs_grid.lat_b.where(obs_grid.lat_b < 90, other = 90)
 
 
-# In[9]:
+# In[ ]:
 
 
 # Regridding Options
 method='nearest_s2d' # ['bilinear', 'conservative', 'nearest_s2d', 'nearest_d2s', 'patch']
 
 
-# In[10]:
+# In[ ]:
 
 
 weights_flag = False # Flag to set up weights have been created
@@ -219,7 +219,7 @@ for year in np.arange(2018, 2025, 1):
         print('Saved file', f_out)
 
 
-# In[11]:
+# In[ ]:
 
 
 # Clean up
@@ -230,19 +230,19 @@ if have_grid_file:
 
 # # Plotting
 
-# In[12]:
+# In[ ]:
 
 
 # ds_new = xr.open_dataset(paths[0])
 
 
-# In[13]:
+# In[ ]:
 
 
 # ds_new
 
 
-# In[14]:
+# In[ ]:
 
 
 
