@@ -77,7 +77,7 @@ runType = 'forecast'
 variables = ['sic']
 metrics_all = {'sic':['anomaly','mean','SIP'], 'hi':['mean']}
 #metrics_all = {'sic':['SIP']}
-updateAll = True
+updateAll = False
 
 # Define Init Periods here, spaced by 7 days (aprox a week)
 # Now

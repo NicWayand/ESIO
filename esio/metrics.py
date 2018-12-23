@@ -294,7 +294,8 @@ def NRMSE(ds_mod, ds_obs, sigma):
     NRMSE =  1 - (a / b)
     return NRMSE
 
-def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=False):
+def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=False,
+        customDomain=None):
     ''' The Integrated Ice‐Edge Error Goessling 2016'''
     
     # Input
@@ -313,10 +314,15 @@ def IIEE(da_mod=None, da_obs=None, region=None, sic_threshold=0.15, testplots=Fa
     # Reduce to sea ice presence
     mod_sip = (da_mod >= sic_threshold).where(da_mod.notnull())
     obs_sip = (da_obs >= sic_threshold).where(da_obs.notnull())
-    
-    # Mask to regions of Arctic we are interested in
-    mod_sip = mod_sip.where(region.mask.isin(region.ocean_regions))
-    obs_sip = obs_sip.where(region.mask.isin(region.ocean_regions))
+
+    # If we have defined a customDomain, use that to mask out model and observations
+    if customDomain is None:
+        # Mask to regions of Arctic we are interested in (default option)
+        mod_sip = mod_sip.where(region.mask.isin(region.ocean_regions))
+        obs_sip = obs_sip.where(region.mask.isin(region.ocean_regions))
+    else:
+        mod_sip = mod_sip.where(customDomain)
+        obs_sip = obs_sip.where(customDomain)
     
     if testplots:
         plt.figure()
@@ -339,7 +345,8 @@ def _BSS(mod=None, obs=None):
 def BrierSkillScore(da_mod_sip=None, 
                     da_obs_ip=None, 
                     region=None, 
-                    testplots=False):
+                    testplots=False,
+                    customDomain=None):
     '''
     Brier Skill Score
     ----------
@@ -366,9 +373,14 @@ def BrierSkillScore(da_mod_sip=None,
     assert ('x' in da_mod_sip.dims), "'x' and 'y' should be dims."
     assert ('y' in da_obs_ip.dims), "'x' and 'y' should be dims"
         
-    # Mask to regions of Arctic we are interested in
-    da_mod_sip = da_mod_sip.where(region.mask.isin(region.ocean_regions))
-    da_obs_ip = da_obs_ip.where(region.mask.isin(region.ocean_regions))
+    # If we have defined a customDomain, use that to mask out model and observations
+    if customDomain is None:
+        # Mask to regions of Arctic we are interested in (default option)
+        da_mod_sip = da_mod_sip.where(region.mask.isin(region.ocean_regions))
+        da_obs_ip = da_obs_ip.where(region.mask.isin(region.ocean_regions))
+    else:
+        da_mod_sip = da_mod_sip.where(customDomain)
+        da_obs_ip = da_obs_ip.where(customDomain)
         
     # Calculate Brier Skill Score
     BSS = _BSS(mod = da_mod_sip, 
