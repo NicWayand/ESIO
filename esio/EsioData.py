@@ -11,6 +11,7 @@ class EsioData(object):
         self.obs_dir = os.path.join(self.data_dir, 'obs')
         self.model_dir = os.path.join(self.data_dir, 'model')
         self.grid_dir = os.path.join(self.data_dir, 'grids')
+        self.make_dir(os.path.join(data_dir, 'grids'))
 
         self.obs = {} #os.path.join(data_dir, 'obs')
         self.model = {} #os.path.join(data_dir, 'model')
