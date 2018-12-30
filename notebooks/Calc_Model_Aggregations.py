@@ -70,7 +70,7 @@ def Update_Model_Aggs():
     runType='forecast'
     updateall = False
 
-    ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc'))
+    ds_region = xr.open_mfdataset(os.path.join(E.grid_dir, 'sio_2016_mask_Update.nc')).load()
 
     for model in all_models:
         print(model)

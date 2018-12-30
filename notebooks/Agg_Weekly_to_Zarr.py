@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 '''
@@ -56,13 +56,13 @@ from dask.distributed import Client
 import timeit
 
 
-# In[ ]:
+# In[2]:
 
 
 dask.config.set(scheduler='threads')  # overwrite default with threaded scheduler (This is faster for this code)
 
 
-# In[ ]:
+# In[3]:
 
 
 # from dask.distributed import Client
@@ -70,7 +70,7 @@ dask.config.set(scheduler='threads')  # overwrite default with threaded schedule
 # client
 
 
-# In[ ]:
+# In[4]:
 
 
 #def Update_PanArctic_Maps():
@@ -99,13 +99,13 @@ init_slice = init_slice[init_slice>=init_start_date] # Select only the inits aft
 print(init_slice[0],init_slice[-1])
 
 
-# In[ ]:
+# In[5]:
 
 
 init_slice
 
 
-# In[ ]:
+# In[6]:
 
 
 #############################################################
@@ -133,7 +133,7 @@ mod_dir = E.model_dir
 # models_2_plot
 
 
-# In[ ]:
+# In[7]:
 
 
 cvar = 'sic' # hard coded for now
@@ -144,7 +144,7 @@ for IS in np.arange(0,len(init_slice),Npers): # Every fourth init date
     start_time_cmod = timeit.default_timer()
 
     it_start = init_slice[IS]
-    if (IS+Npers-1)>len(init_slice):
+    if (IS+Npers-1)>=len(init_slice):
         it_end = init_slice[-1]
     else:
         it_end = init_slice[IS+Npers-1]
@@ -200,23 +200,22 @@ for IS in np.arange(0,len(init_slice),Npers): # Every fourth init date
         ds_m=None
 
 
-# In[ ]:
+# In[8]:
 
 
 # xr.open_zarr('/home/disk/sipn/nicway/data/model/zarr/temp/sic_2018-06-24.zarr').SIP.sel(model='MME').notnull().sum().values
 
 
-# In[ ]:
+# In[9]:
 
 
 # Combine all Zarr chunks
 zarr_dir = '/home/disk/sipn/nicway/data/model/zarr/temp/'
-
 zarr_inits = sorted([ name for name in os.listdir(zarr_dir) if os.path.isdir(os.path.join(zarr_dir, name)) ])
 zarr_inits
 
 
-# In[ ]:
+# In[10]:
 
 
 zl = []
@@ -226,13 +225,13 @@ for c_init in zarr_inits:
 ds_Zarr = xr.concat(zl,dim='init_end')
 
 
-# In[ ]:
+# In[11]:
 
 
 print(ds_Zarr)
 
 
-# In[ ]:
+# In[12]:
 
 
 ###### ADD METADATA #################
@@ -335,7 +334,7 @@ ds_Zarr.attrs = {
 }
 
 
-# In[ ]:
+# In[13]:
 
 
 # Hack to decode strings
